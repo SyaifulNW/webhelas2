@@ -17,7 +17,7 @@ class ProgramKerjaController extends Controller
     {
         $user = Auth::user();
         $viewRole = $request->query('view_role');
-        $isRofi = stripos($user->name, 'Rofi') !== false;
+        $isRafiRofi = stripos($user->name, 'Rafi') !== false || stripos($user->name, 'Rofi') !== false;
 
         $query = ProgramKerja::with('inisiatifs')
             ->orderBy('created_at', 'asc');
@@ -26,8 +26,8 @@ class ProgramKerjaController extends Controller
         $userName = $user->name;
         $isYasminLinda = stripos($userName, 'Yasmin') !== false || stripos($userName, 'Linda') !== false;
 
-        // Jika administrator atau Rofi ingin melihat monitoring role tertentu
-        if ($userRole === 'administrator' || $isRofi) {
+        // Jika administrator atau (Rafi/Rofi yang BUKAN operasional) ingin melihat monitoring role tertentu
+        if ($userRole === 'administrator' || ($isRafiRofi && $userRole !== 'operasional')) {
             if ($viewRole) {
                 // Monitor role tertentu jika ada parameter view_role
                 $query->where('created_by_role', $viewRole);
@@ -35,6 +35,15 @@ class ProgramKerjaController extends Controller
                 // DEFAULT: Tampilkan role produksi untuk Admin / Rofi
                 $query->where('created_by_role', 'produksi');
             }
+        }
+        // Jika Rafi/Rofi dengan role Operasional -> Hanya milik sendiri
+        else if ($isRafiRofi && $userRole === 'operasional') {
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                    ->orWhereHas('inisiatifs', function ($sub) use ($user) {
+                        $sub->where('pic', $user->name);
+                    });
+            });
         }
         // Jika Yasmin atau Linda -> Hanya yang dia buat sendiri
         else if ($isYasminLinda) {

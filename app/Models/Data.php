@@ -70,26 +70,28 @@ class Data extends Model
     public function kota()
     {
         return $this->belongsTo('App\Models\Kota', 'kota_id');
-    
-}
+    }
+
     public function getLeadsAttribute($value)
     {
         return ucfirst($value);
     }
+
     /*
     public function jenisBisnis()
     {
         return $this->belongsTo('App\Models\jenisbisnis', 'jenis_bisnis');
     }
     */
+
     public function salesplan()
     {
         return $this->hasMany('App\Models\SalesPlan', 'data_id');
     }
-    
+
     public function createdBy()
-{
-    return $this->belongsTo(User::class, 'created_by');
-}
+    {
+        return $this->belongsTo(User::class, 'created_by', 'name');
+    }
 }
 

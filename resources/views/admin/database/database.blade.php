@@ -1,7 +1,27 @@
 @extends('layouts.masteradmin')
 @section('content')
+@php 
+    $userRole = strtolower(auth()->user()->role); 
+    $viewType = request('view_type');
+    $isChapterView = ($userRole === 'chapter' || $userRole === 'reseller' || ($userRole === 'administrator' && $viewType === 'chapter'));
+    $isAdminCSView = ($userRole === 'administrator' && $viewType !== 'chapter');
+    $isCSMBCView = ($userRole === 'cs-mbc');
+@endphp
 
     <style>
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(230, 126, 34, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0); }
+        }
+        .badge-pulse {
+            animation: pulse-orange 2s infinite;
+            background: #e67e22 !important;
+            border: 2px solid #fff !important;
+            border-radius: 6px !important;
+            display: inline-block;
+        }
+
         /* Contenteditable Placeholder */
         [contenteditable]:empty:before {
             content: attr(data-placeholder);
@@ -36,7 +56,7 @@
         #myTable,
         #myTable th,
         #myTable td {
-            border: 2px solid #999 !important;
+            border: 2px solid #000 !important;
         }
 
         #myTable thead th {
@@ -46,31 +66,53 @@
 
         .read-more-container {
             position: relative;
-            max-height: 4.5em;
-            /* Approximately 3 lines */
+            max-height: 6em; /* Approx 4 lines */
             overflow: hidden;
             transition: max-height 0.3s ease-out;
-            line-height: 1.5;
+            line-height: 1.4;
+        }
+
+        .read-more-container:not(.expanded)::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2em;
+            background: linear-gradient(transparent, rgba(255,255,255,0.1));
+            pointer-events: none;
         }
 
         .read-more-container.expanded {
             max-height: 2000px;
-            /* Large enough */
         }
 
         .btn-read-more {
             display: block;
-            color: #007bff;
-            cursor: pointer;
+            color: #0d6efd !important;
+            cursor: pointer !important;
             font-size: 0.75rem;
             margin-top: 4px;
-            font-weight: 600;
-            text-decoration: none;
+            font-weight: 700;
+            text-decoration: underline !important;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .status-sudah_transfer .btn-read-more,
+        .status-no .btn-read-more {
+            color: #fff !important;
         }
 
         .btn-read-more:hover {
-            text-decoration: underline;
-            color: #0056b3;
+            color: #0056b3 !important;
+            text-decoration: none !important;
+        }
+        
+        .status-sudah_transfer .btn-read-more:hover,
+        .status-no .btn-read-more:hover {
+            color: #f8f9fa !important;
         }
 
         .text-wrap-normal {
@@ -82,13 +124,24 @@
 
         .editable {
             transition: background-color 0.2s ease;
-            padding: 2px 4px;
-            border-radius: 4px;
+            padding: 4px 6px;
+            border-radius: 8px;
+            border: 1px solid #000 !important;
+            background-color: #fff !important;
+            color: #000 !important;
         }
 
         .editable:hover {
-            background-color: rgba(0, 123, 255, 0.08);
-            outline: 1px dashed #007bff;
+            background-color: #f8f9fa !important;
+            outline: 2px solid #007bff;
+        }
+
+        /* Style for selects in the table */
+        #myTable select {
+            border: 1px solid #000 !important;
+            border-radius: 8px !important;
+            background-color: #fff !important;
+            color: #000 !important;
         }
 
         @if(strtolower(auth()->user()->role) === 'marketing')
@@ -533,7 +586,7 @@
                             <i class="fas fa-file-pdf"></i> Follow Up
                         </button>
                         
-                        @if(in_array($userRole, ['chapter', 'reseller']))
+                        @if(in_array($userRole, ['chapter', 'reseller']) || (request('view_type') == 'chapter' && $userRole == 'administrator'))
                             <div class="ml-2 px-2 py-1 bg-light border rounded-pill shadow-sm d-flex align-items-center">
                                 <i class="fas fa-database text-info mr-1"></i>
                                 <span class="text-xs font-weight-bold text-gray-800">Total Database: <span class="text-primary">{{ number_format($data->count() ?? 0, 0, ',', '.') }}</span></span>
@@ -604,100 +657,117 @@
                                 font-weight: 600;
                             }
                         </style>
-                        <div class="modern-filter-container">
-                            @php
-                                use App\Models\User;
 
-                                $user = auth()->user();
-                                $csList = collect();
+                        {{-- Toolbar Atas: Filter (Presisi & Berfungsi) --}}
+                        <div class="w-100 mb-3 d-flex align-items-center justify-content-end">
+                            <div class="d-flex align-items-end flex-wrap" style="gap: 10px;">
+                                @php
+                                    use App\Models\User;
+                                    $user = auth()->user();
+                                    $csList = collect();
+                                    if (in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo' || $user->name === 'Linda') {
+                                        $csList = User::where('role', 'cs-mbc')->where('is_active', 1)->select('id', 'name')->orderBy('name')->get();
+                                        $chapterList = User::where('role', 'chapter')->select('id', 'name', 'chapter')->orderBy('name')->get();
+                                    }
+                                @endphp
 
-                                // Daftar CS hanya untuk admin/manager
-                                // Daftar CS dan Chapter hanya untuk admin/manager
-                                if (in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo' || $user->name === 'Linda') {
-                                    $csList = User::where('role', 'cs-mbc')
-                                        ->where('is_active', 1)
-                                        ->select('id', 'name')
-                                        ->orderBy('name')
-                                        ->get();
-                                        
-                                    $chapterList = User::where('role', 'chapter')
-                                        ->select('id', 'name', 'chapter')
-                                        ->orderBy('name')
-                                        ->get();
-                                }
-                            @endphp
+                                {{-- Status Ikut Kelas --}}
+                                @if(!in_array($userRole, ['reseller', 'chapter']))
+                                    <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'none' : 'flex' }};" id="filterIkutKelasContainer">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Status Ikut Kelas</label>
+                                        <select id="filterIkutKelas" class="form-select form-select-sm modern-select" onchange="toggleDaftarKelas(this.value)">
+                                            <option value="">ALL Status</option>
+                                            <option value="1" {{ request('ikut_kelas') == '1' ? 'selected' : '' }}>Sudah Ikut</option>
+                                            <option value="0" {{ request('ikut_kelas') == '0' ? 'selected' : '' }}>Belum Ikut</option>
+                                        </select>
+                                    </div>
 
-                            @if(!in_array($userRole, ['reseller', 'chapter']))
-                                <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'none' : 'flex' }};" id="filterIkutKelasContainer">
-                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Pilih Status Ikut Kelas</label>
-                                    <select id="filterIkutKelas" class="form-select form-select-sm modern-select"
-                                        onchange="toggleDaftarKelas(this.value)">
-                                        <option value="">ALL Status</option>
-                                        <option value="1" {{ request('ikut_kelas') == '1' ? 'selected' : '' }}>Sudah Pernah Ikut
-                                        </option>
-                                        <option value="0" {{ request('ikut_kelas') == '0' ? 'selected' : '' }}>Belum Pernah Ikut
-                                        </option>
-                                    </select>
-                                </div>
-                            @endif
-
-                            {{-- Filter Daftar Kelas (Internal SalesPlan) --}}
-                            <div id="containerDaftarKelas" class="flex-column {{ (request('ikut_kelas') === '1' || request('ikut_kelas') === '0') ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
-                                <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Pilih Kelas</label>
-                                <select id="filterDaftarKelas"
-                                    class="form-select form-select-sm modern-select">
-                                    <option value="">Pilih Kelas</option>
-                                    @foreach($kelas as $k)
-                                        <option value="{{ $k->id }}" {{ request('daftar_kelas') == $k->id ? 'selected' : '' }}>
-                                            {{ str_contains($k->nama_kelas, 'Muslim Indonesia') ? 'M1T' : $k->nama_kelas }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                             {{-- Filter Input Oleh (Chapter) --}}
-                            @if(in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo')
-                                <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'flex' : 'none' }};" id="filterChapterContainer">
-                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Pilih Chapter</label>
-                                    <select id="filterChapter" class="form-select form-select-sm modern-select">
-                                        <option value="">ALL CHAPTER</option>
-                                        @if(isset($chapterList))
-                                            @foreach($chapterList as $ch)
-                                                <option value="{{ $ch->id }}" {{ request('chapter_id') == $ch->id ? 'selected' : '' }}>
-                                                    {{ strtoupper($ch->name) }} {{ $ch->chapter ? '- ' . $ch->chapter : '' }}
+                                    {{-- Filter Daftar Kelas (Dinamis) --}}
+                                    <div id="containerDaftarKelas" class="flex-column {{ (request('ikut_kelas') === '1' || request('ikut_kelas') === '0') ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Pilih Kelas</label>
+                                        <select id="filterDaftarKelas" class="form-select form-select-sm modern-select">
+                                            <option value="">Pilih Kelas</option>
+                                            @foreach($kelas as $k)
+                                                <option value="{{ $k->id }}" {{ request('daftar_kelas') == $k->id ? 'selected' : '' }}>
+                                                    {{ str_contains($k->nama_kelas, 'Muslim Indonesia') ? 'M1T' : $k->nama_kelas }}
                                                 </option>
                                             @endforeach
-                                        @endif
+                                        </select>
+                                    </div>
+                                @endif
+
+                                {{-- Potensi --}}
+                                <div class="flex-column" style="gap: 2px; display: flex;">
+                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Potensi Kelas Selanjutnya</label>
+                                    <select id="filterPotensi" class="form-select form-select-sm modern-select" onchange="toggleFilterKelas(this.value)">
+                                        <option value="">ALL Potensi</option>
+                                        <option value="MBC" {{ request('potensi') == 'MBC' ? 'selected' : '' }}>MBC</option>
+                                        <option value="SMI" {{ request('potensi') == 'SMI' ? 'selected' : '' }}>M1T (SMI)</option>
                                     </select>
                                 </div>
-                            @endif
 
-                            {{-- Filter Input Oleh (CS) --}}
-                            @if(in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo')
-                                <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'none' : 'flex' }};" id="filterCSContainer">
-                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Pilih Tim CS</label>
-                                    <select id="filterCS" class="form-select form-select-sm modern-select">
-                                        <option value="">ALL Tim CS</option>
-                                        @foreach($csList as $cs)
-                                            <option value="{{ $cs->name }}" {{ request('cs_name') == $cs->name ? 'selected' : '' }}>
-                                                {{ $cs->name }}
-                                            </option>
+                                {{-- Filter Nama Kelas (Dinamis jika MBC) --}}
+                                <div id="containerFilterKelas" class="flex-column {{ request('potensi') == 'MBC' ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
+                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Kelas MBC</label>
+                                    <select id="filterKelasId" class="form-select form-select-sm modern-select">
+                                        <option value="">Pilih Kelas</option>
+                                        @php $today = \Carbon\Carbon::today(); @endphp
+                                        @foreach($kelas as $k)
+                                            @php $tglSelesai = $k->tanggal_selesai ? \Carbon\Carbon::parse($k->tanggal_selesai) : null; @endphp
+                                            @if(!str_contains($k->nama_kelas, 'Muslim Indonesia') && ($tglSelesai && $tglSelesai->gte($today)))
+                                                <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                            @endif
                                         @endforeach
                                     </select>
                                 </div>
-                            @endif
 
+                                {{-- Follow Up --}}
+                                <div class="flex-column" style="gap: 2px; display: flex;">
+                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Status Follow Up</label>
+                                    <select id="filterStatus" class="form-select form-select-sm modern-select">
+                                        <option value="">ALL Status</option>
+                                        <option value="cold" {{ request('status') == 'cold' ? 'selected' : '' }}>Cold</option>
+                                        <option value="tertarik" {{ request('status') == 'tertarik' ? 'selected' : '' }}>Tertarik</option>
+                                        <option value="mau_transfer" {{ request('status') == 'mau_transfer' ? 'selected' : '' }}>Mau Transfer</option>
+                                        <option value="sudah_transfer" {{ request('status') == 'sudah_transfer' ? 'selected' : '' }}>Sudah Transfer</option>
+                                        <option value="no" {{ request('status') == 'no' ? 'selected' : '' }}>No</option>
+                                    </select>
+                                </div>
 
+                                {{-- CS / Chapter Filter --}}
+                                @if(in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo')
+                                    <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'flex' : 'none' }};" id="filterChapterContainer">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Chapter</label>
+                                        <select id="filterChapter" class="form-select form-select-sm modern-select">
+                                            <option value="">ALL Chapter</option>
+                                            @if(isset($chapterList))
+                                                @foreach($chapterList as $ch)
+                                                    <option value="{{ $ch->id }}" {{ request('chapter_id') == $ch->id ? 'selected' : '' }}>{{ strtoupper($ch->name) }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                    <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'none' : 'flex' }};" id="filterCSContainer">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Tim CS</label>
+                                        <select id="filterCS" class="form-select form-select-sm modern-select">
+                                            <option value="">ALL Tim CS</option>
+                                            @foreach($csList as $cs)
+                                                <option value="{{ $cs->name }}" {{ request('cs_name') == $cs->name ? 'selected' : '' }}>{{ $cs->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
 
-                            {{-- Search Group --}}
-                            <div class="modern-search-group">
-                                <input type="text" id="tableSearch" class="form-control form-control-sm modern-search-input"
-                                    style="width: 120px; height: 30px; font-size: 0.75rem;"
-                                    placeholder="Cari..." value="{{ request('search') }}">
-                                <button class="btn btn-primary btn-sm modern-search-btn" type="button"
-                                    onclick="applyAllDatabaseFilters()" style="height: 30px; font-size: 0.75rem;">
-                                    <i class="fas fa-search mr-1"></i> TAMPILKAN
-                                </button>
+                                {{-- Search Group --}}
+                                <div class="modern-search-group" style="height: 32px;">
+                                    <input type="text" id="tableSearch" class="form-control form-control-sm modern-search-input"
+                                        style="width: 150px; height: 32px; font-size: 0.75rem;"
+                                        placeholder="Cari..." value="{{ request('search') }}">
+                                    <button class="btn btn-primary btn-sm modern-search-btn" type="button"
+                                        onclick="applyAllDatabaseFilters()" style="height: 32px; font-size: 0.75rem; font-weight: 700;">
+                                        <i class="fas fa-search"></i> TAMPILKAN
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -710,6 +780,12 @@
             @endphp
 
             <script>
+                function updateFilter(key, val) {
+                    var params = {};
+                    params[key] = val;
+                    updateFilters(params);
+                }
+
                 function updateFilters(params) {
                     var url = new URL(window.location.href);
                     for (const [key, val] of Object.entries(params)) {
@@ -722,6 +798,11 @@
                         if (key === 'ikut_kelas' && val === '') {
                             url.searchParams.delete('daftar_kelas');
                         }
+                    }
+
+                    if (params.view_type !== undefined) {
+                        window.location.href = url.toString();
+                        return;
                     }
 
                     url.searchParams.delete('page');
@@ -738,9 +819,17 @@
                     fetch(url.toString(), {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
                         .then(data => {
-                            tableBody.innerHTML = data.html;
+                            if (data && data.html !== undefined) {
+                                tableBody.innerHTML = data.html;
+                            } else {
+                                console.error('Data.html is undefined!', data);
+                                tableBody.innerHTML = '<tr><td colspan="20" class="text-center text-danger">Gagal memuat data (Response Error)</td></tr>';
+                            }
                             tableBody.style.opacity = '1';
                             tableBody.style.pointerEvents = 'auto';
 
@@ -801,23 +890,45 @@
                 }
 
                 function applyAllDatabaseFilters() {
-                    const getVal = (id) => {
-                        const el = document.getElementById(id);
-                        return el ? el.value : '';
+                    const params = {
+                        search: document.getElementById('tableSearch').value,
+                        sumber: document.getElementById('filterSumber').value,
+                        provinsi: document.getElementById('filterProvinsi').value,
+                        kota: document.getElementById('filterKota').value,
+                        status: document.getElementById('filterStatus').value,
+                        potensi: document.getElementById('filterPotensi').value,
+                        kelas_id: document.getElementById('filterKelasId').value
                     };
 
-                    updateFilters({
-                        ikut_kelas: getVal('filterIkutKelas'),
-                        daftar_kelas: getVal('filterDaftarKelas'),
-                        chapter_id: getVal('filterChapter'),
-                        cs_name: getVal('filterCS'),
-                        search: getVal('tableSearch'),
-                        sumber: getVal('filterSumber'),
-                        provinsi: getVal('filterProvinsi'),
-                        kota: getVal('filterKota'),
-                        potensi: getVal('filterPotensi'),
-                        potensi_kelas_id: getVal('filterPotensiKelas')
-                    });
+                    // Add optional filters if they exist in DOM
+                    const filterIkut = document.getElementById('filterIkutKelas');
+                    if (filterIkut) params.ikut_kelas = filterIkut.value;
+
+                    const filterDaftar = document.getElementById('filterDaftarKelas');
+                    if (filterDaftar) params.daftar_kelas = filterDaftar.value;
+
+                    const filterCS = document.getElementById('filterCS');
+                    if (filterCS) params.cs_name = filterCS.value;
+
+                    const filterChapter = document.getElementById('filterChapter');
+                    if (filterChapter) params.chapter_id = filterChapter.value;
+
+                    updateFilters(params);
+                }
+
+                function toggleFilterKelas(val) {
+                    const container = document.getElementById('containerFilterKelas');
+                    if (!container) return;
+                    
+                    if (val === 'MBC') {
+                        container.classList.remove('d-none');
+                        container.classList.add('d-flex');
+                    } else {
+                        container.classList.add('d-none');
+                        container.classList.remove('d-flex');
+                        const select = document.getElementById('filterKelasId');
+                        if (select) select.value = '';
+                    }
                 }
 
                 function updatePotensiHeader(val) {
@@ -882,10 +993,10 @@
                         style="width: {{ strtolower(auth()->user()->role) === 'marketing' ? '100%' : 'max-content' }};">
                         <thead>
                             <tr>
-                                <th rowspan="2">No</th>
+                                <th>No</th>
 
-                                <th rowspan="2" style="min-width: 150px;">Nama & No.WA</th>
-                                <th rowspan="2" style="width: 92.5px;">
+                                <th style="min-width: 150px;">Nama & No.WA</th>
+                                <th style="width: 92.5px;">
                                     Sumber Leads <br>
                                         <select id="filterSumber" class="form-control form-control-sm" style="font-size: 0.75rem;">
                                             <option value="">-- Semua --</option>
@@ -899,7 +1010,7 @@
                                             @endif
                                         </select>
                                 </th>
-                                <th rowspan="2" style="width: 140px;">
+                                <th style="width: 140px;">
                                     Prov/Kota <br>
                                     <div class="d-flex flex-column gap-1">
                                         <select id="filterProvinsi" class="form-control form-control-sm mb-1"
@@ -926,142 +1037,39 @@
                                         </select>
                                     </div>
                                 </th>
-                                <th rowspan="2" style="width: 140px;">Nama bisnis</th>
-                                <th rowspan="2" style="width: 250px;">{{ in_array($userRole, ['chapter', 'reseller']) ? 'Situasi & Kendala Bisnis' : 'Situasi / Kendala bisnis' }}</th>
-                                @if($userRole !== 'cs-mbc')
-                                    <th rowspan="2" style="width: 120px;">
-                                        Rekap Penilaian
-                                        <div class="mt-1">
-                                            <select class="form-control form-control-sm" 
-                                                onchange="updateFilter('potensi', this.value)"
-                                                style="font-size: 0.7rem; padding: 2px 5px; height: auto; border-radius: 5px;">
-                                                <option value="">- ALL -</option>
-                                                <option value="Cold" {{ request('potensi') == 'Cold' ? 'selected' : '' }}>Cold</option>
-                                                <option value="Warm" {{ request('potensi') == 'Warm' ? 'selected' : '' }}>Warm</option>
-                                                <option value="Hot" {{ request('potensi') == 'Hot' ? 'selected' : '' }}>Hot</option>
-                                            </select>
-                                        </div>
-                                    </th>
-                                @endif
+                                <th style="width: 140px;">Nama Bisnis</th>
+                                
+                                @php
+                                    // Use globally defined variables from top of file
+                                @endphp
 
-                                <!-- New Columns Grouped under KUALIFIKASI -->
-                                <th colspan="{{ in_array($userRole, ['administrator', 'chapter', 'reseller']) ? '3' : '4' }}"
-                                    class="text-center col-spin-header" style="padding: 5px 2px;">
-                                    KUALIFIKASI <br>
-                                    <select id="filterSpin" class="form-control form-control-sm mt-1 mx-auto"
-                                        onchange="updateFilter('filter_spin', this.value)"
-                                        style="font-size: 0.7rem; height: auto; width: 90%;">
-                                        <option value="">-- KUALIFIKASI --</option>
-                                        <option value="ALL" {{ request('filter_spin') == 'ALL' ? 'selected' : '' }}>ALL
-                                        </option>
-                                        <option value="NOT_ALL" {{ request('filter_spin') == 'NOT_ALL' ? 'selected' : '' }}>
-                                            NOT ALL</option>
-                                    </select>
-                                </th>
-                                <th rowspan="2" class="text-center col-zoom">
-                                    IKUT ZOOM <br>
-                                    <select class="form-control form-control-sm mt-1 px-1"
-                                        onchange="updateFilter('zoom', this.value)"
-                                        style="font-size: 0.7rem; height: auto;">
-                                        <option value="">- ALL -</option>
-                                        <option value="1" {{ request('zoom') == '1' ? 'selected' : '' }}>Ikut</option>
-                                        <option value="0" {{ request('zoom') == '0' ? 'selected' : '' }}>Belum</option>
-                                    </select>
-                                </th>
+                                {{-- Header for Chapter/Reseller or Admin in Chapter Tab --}}
+                                @if($isChapterView)
+                                    <th style="width: 220px;">Situasi Bisnis</th>
+                                    <th style="width: 120px; text-align:center;">Rekap Penilaian</th>
+                                    <th style="width: 110px; text-align:center;">Prospek</th>
+                                    <th style="width: 160px; text-align:center;">Status Potensi</th>
+                                    @if($userRole === 'administrator')
+                                        <th style="width: 120px; text-align:center;">PIC</th>
+                                    @endif
+                                
+                                {{-- Header for Admin in CS Helas Tab --}}
+                                @elseif($isAdminCSView)
+                                    <th style="min-width: 140px; text-align:center;">✅ Kelas yang Sudah Diikuti</th>
+                                    <th style="min-width: 140px; text-align:center;">🔔 Kelas yang Belum Diikuti</th>
+                                    <th style="width: 160px; text-align:center;">Status Potensi</th>
+                                    <th style="width: 120px; text-align:center;">PIC</th>
 
-                                @if(Auth::user()->role !== 'marketing' && !in_array($userRole, ['reseller', 'chapter']))
-                                    <th rowspan="2" style="width: 140px; vertical-align: middle;">
-                                        <div class="d-flex flex-column gap-1">
-                                            <div class="text-white small fw-bold mb-1" style="font-size: 0.7rem;">POTENSI</div>
-                                            <select id="filterPotensi"
-                                                class="form-control form-control-sm border-0 bg-white text-dark fw-bold p-0 text-center shadow-none"
-                                                style="font-size: 0.7rem; cursor: pointer; height: 22px;"
-                                                onchange="updatePotensiHeader(this.value)">
-                                                <option value="all">ALL</option>
-                                                <option value="MBC" {{ request('potensi') == 'MBC' ? 'selected' : '' }}>MBC
-                                                </option>
-                                                <option value="SMI" {{ request('potensi') == 'SMI' ? 'selected' : '' }}>M1T
-                                                </option>
-                                            </select>
-                                            
-                                            {{-- Filter Dependent MBC --}}
-                                            <select id="filterPotensiKelas" 
-                                                class="form-control form-control-sm border-0 bg-white text-dark small mt-1 {{ request('potensi') == 'MBC' ? '' : 'd-none' }}"
-                                                style="font-size: 0.65rem; height: 20px; padding: 0 2px;"
-                                                onchange="updateFilter('potensi_kelas_id', this.value)">
-                                                <option value="">- Pilih Kelas -</option>
-                                                @foreach($kelas as $k)
-                                                    @if(!str_contains($k->nama_kelas, 'Muslim Indonesia'))
-                                                        <option value="{{ $k->id }}" {{ request('potensi_kelas_id') == $k->id ? 'selected' : '' }}>
-                                                            {{ $k->nama_kelas }}
-                                                        </option>
-                                                    @endif
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </th>
-                                @endif
+                                {{-- Header for CS-MBC role --}}
+                                @elseif($isCSMBCView)
+                                    <th style="width: 220px;">Situasi Bisnis</th>
+                                    <th style="min-width: 140px; text-align:center;">✅ Kelas yang Sudah Diikuti</th>
+                                    <th style="min-width: 140px; text-align:center;">🔔 Kelas yang Belum Diikuti</th>
+                                    <th style="width: 80px; text-align:center;">Action</th>
 
-                                @if(in_array($userRole, ['chapter', 'reseller', 'agen', 'cs-mbc']))
-                                    {{-- Status Column (Moved from Prospek as requested) --}}
-                                    <th rowspan="2" class="text-center" style="min-width: 150px; background-color: #25799E !important;">
-                                        Status
-                                        <div class="mt-1">
-                                            <select class="form-control form-control-sm" 
-                                                style="font-size: 0.7rem; padding: 2px 5px; height: auto; border-radius: 5px;"
-                                                onchange="updateFilter('status', this.value)">
-                                                <option value="">🔍 Semua</option>
-                                                <option value="cold" {{ request('status') == 'cold' ? 'selected' : '' }}>⚪ Cold</option>
-                                                <option value="tertarik" {{ request('status') == 'tertarik' ? 'selected' : '' }}>🟡 Tertarik</option>
-                                                <option value="sudah_transfer" {{ request('status') == 'sudah_transfer' ? 'selected' : '' }}>🔵 Sudah Transfer</option>
-                                                <option value="no" {{ request('status') == 'no' ? 'selected' : '' }}>🔴 No</option>
-                                            </select>
-                                        </div>
-                                    </th>
-                                @endif
-
-
-                                @if(in_array($userRole, ['administrator', 'manager', 'marketing', 'agen']) || auth()->user()->name === 'Agus Setyo')
-                                    <th rowspan="2" style="width: 100px;">
-                                        <div class="d-flex flex-column">
-                                            <a href="javascript:void(0)"
-                                                onclick="updateFilters({sort_by: 'created_by', order: '{{ (request('sort_by') == 'created_by' && request('order') == 'asc') ? 'desc' : 'asc' }}'})"
-                                                class="text-white text-decoration-none d-flex align-items-center justify-content-between mb-1">
-                                                <span>Input Oleh</span>
-                                                <span>
-                                                    @if(request('sort_by') == 'created_by')
-                                                        <i class="fas fa-sort-{{ request('order') == 'asc' ? 'up' : 'down' }}"></i>
-                                                    @else
-                                                        <i class="fas fa-sort text-white-50"></i>
-                                                    @endif
-                                                </span>
-                                            </a>
-                                            <select class="form-control form-control-sm text-dark"
-                                                onchange="updateFilter('cs_name', this.value)"
-                                                style="min-width: 100px; font-size: 0.75rem;">
-                                                <option value="">-- Semua --</option>
-                                                @foreach($csList as $cs)
-                                                    <option value="{{ $cs->name }}" {{ request('cs_name') == $cs->name ? 'selected' : '' }}>
-                                                        {{ $cs->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </th>
-
-                                @endif
-
-                                @if(!in_array(strtolower(auth()->user()->role), ['marketing', 'administrator']))
-                                    <th rowspan="2" style="width: 80px;">Action</th>
-                                @endif
-                            </tr>
-                            <tr>
-                                <th class="text-center col-bat">B</th>
-                                <th class="text-center col-bat">A</th>
-                                <th class="text-center col-bat">T</th>
-
-                                @if(!in_array($userRole, ['administrator', 'chapter', 'reseller']))
-                                    <th class="text-center" style="width: 100px;">Tgl Update</th>
+                                {{-- Default / Marketing --}}
+                                @else
+                                    <th style="width: 80px; text-align:center;">Action</th>
                                 @endif
                             </tr>
                         </thead>
@@ -1074,6 +1082,34 @@
 
                         </tbody>
                     </table>
+
+                    {{-- Legend Footer: Diletakkan di bawah tabel --}}
+                    <div class="mt-4 p-3 d-flex align-items-center justify-content-center flex-wrap" 
+                         style="background: #ffffff; border: 2px solid #000; border-radius: 12px; gap: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                        <span class="fw-bold text-dark text-uppercase mr-2" style="font-size: 0.75rem; letter-spacing: 1px;">
+                            <i class="fas fa-map mr-1"></i> Panduan Warna Status:
+                        </span>
+                        <div class="d-flex align-items-center bg-light px-3 py-1 shadow-sm" style="border-radius: 50px; border: 1px solid #000;">
+                            <div style="width: 12px; height: 12px; background: #ffffff; border: 1px solid #000; border-radius: 50%; margin-right: 8px;"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.75rem;">COLD</span>
+                        </div>
+                        <div class="d-flex align-items-center bg-light px-3 py-1 shadow-sm" style="border-radius: 50px; border: 1px solid #000;">
+                            <div style="width: 12px; height: 12px; background: #F2F527; border: 1px solid #000; border-radius: 50%; margin-right: 8px;"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.75rem;">TERTARIK</span>
+                        </div>
+                        <div class="d-flex align-items-center bg-light px-3 py-1 shadow-sm" style="border-radius: 50px; border: 1px solid #000;">
+                            <div style="width: 12px; height: 12px; background: #3CDE1D; border: 1px solid #000; border-radius: 50%; margin-right: 8px;"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.75rem;">MAU TRANSFER</span>
+                        </div>
+                        <div class="d-flex align-items-center bg-light px-3 py-1 shadow-sm" style="border-radius: 50px; border: 1px solid #000;">
+                            <div style="width: 12px; height: 12px; background: #1786E6; border: 1px solid #000; border-radius: 50%; margin-right: 8px;"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.75rem;">SUDAH TRANSFER</span>
+                        </div>
+                        <div class="d-flex align-items-center bg-light px-3 py-1 shadow-sm" style="border-radius: 50px; border: 1px solid #000;">
+                            <div style="width: 12px; height: 12px; background: #E61717; border: 1px solid #000; border-radius: 50%; margin-right: 8px;"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.75rem;">NO</span>
+                        </div>
+                    </div>
 
                     <script>
                         // Horizontal Floating Scroll Logic (Hanging Scroll) - Ported from Sales Plan
@@ -2989,4 +3025,604 @@
             @endif
         });
     </script>
+
+{{-- ============================================================
+     MODAL DETAIL PESERTA
+     ============================================================ --}}
+<div class="modal fade" id="modalDetailPeserta" tabindex="-1" role="dialog" aria-labelledby="modalDetailPesertaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content" style="border-radius:14px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+
+            {{-- Header --}}
+            <div class="modal-header border-0 pb-2" style="background:linear-gradient(135deg,#25799E,#1a5475); color:#fff;">
+                <div>
+                    <h5 class="modal-title font-weight-bold mb-0" id="modalDetailPesertaLabel">
+                        <i class="fas fa-user-circle mr-2"></i>
+                        <span id="detailNama">-</span>
+                    </h5>
+                    <small class="d-block mt-1 opacity-75">
+                        <i class="fas fa-phone-alt mr-1"></i><span id="detailNoWa"></span>
+                        &nbsp;|&nbsp;
+                        <i class="fas fa-user mr-1"></i><span id="detailInputOleh"></span>
+                        &nbsp;|&nbsp;
+                        <i class="fas fa-clock mr-1"></i>Update: <span id="detailUpdatedAt"></span>
+                    </small>
+                </div>
+                <div class="d-flex align-items-center" style="gap:15px;">
+                    <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm text-dark d-flex align-items-center" 
+                            style="border-radius:20px; font-size:0.7rem; border:1px solid #fff; padding: 4px 12px; height: 28px;"
+                            onclick="refreshProspekData()">
+                        <i class="fas fa-sync-alt mr-1"></i> REUSE / REFRESH
+                    </button>
+                    <button type="button" class="close text-white p-0 m-0" data-dismiss="modal" aria-label="Tutup" style="opacity:1; font-size:1.4rem; line-height:1;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body p-3" style="background:#f4f6f9;">
+
+                {{-- Row 1: Potensi + Status (Layout Disesuaikan) --}}
+                <div class="row mb-3">
+                    {{-- Potensi --}}
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius:10px;">
+                            <div class="card-body py-3">
+                                <p class="text-muted small font-weight-bold mb-2" style="text-transform:uppercase; letter-spacing:.5px;">Potensi Kelas Selanjutnya</p>
+                                <select id="detailPotensiSelect"
+                                    class="form-control form-control-sm font-weight-bold"
+                                    style="border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                                    onchange="saveDetailPotensi()">
+                                    <option value="">- Pilih -</option>
+                                    <option value="MBC">MBC</option>
+                                    <option value="SMI">M1T (SMI)</option>
+                                </select>
+                                <div id="detailPotensiKelasWrap" class="mt-2 d-none">
+                                    <select id="detailKelasSelect"
+                                        class="form-control form-control-sm"
+                                        style="font-size:0.8rem; border-radius:8px;"
+                                        onchange="saveDetailKelas()">
+                                        <option value="">- Pilih Kelas MBC -</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Status --}}
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius:10px;">
+                            <div class="card-body py-3">
+                                <p class="text-muted small font-weight-bold mb-2" style="text-transform:uppercase; letter-spacing:.5px;">Status Follow Up</p>
+                                <select id="detailStatusSelect"
+                                    class="form-control form-control-sm font-weight-bold"
+                                    style="border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                                    onchange="saveDetailStatus()">
+                                    <option value="cold">⚪ Cold</option>
+                                    <option value="tertarik">🟡 Tertarik</option>
+                                    <option value="mau_transfer">🟢 Mau Transfer</option>
+                                    <option value="sudah_transfer">🔵 Sudah Transfer</option>
+                                    <option value="no">🔴 No</option>
+                                </select>
+                                
+                                {{-- Input Nominal (Hidden by default) --}}
+                                <div id="wrapperNominalBayar" class="mt-2 d-none">
+                                    <label class="small font-weight-bold text-success mb-1 text-uppercase" style="letter-spacing: 0.5px;">Nominal Bayar (Rp)</label>
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text bg-success text-white border-0" style="border-radius:10px 0 0 10px;">Rp</span>
+                                        </div>
+                                        <input type="text" id="detailNominalInput" class="form-control form-control-sm shadow-sm" 
+                                               style="border-radius:0 10px 10px 0; height:35px; font-weight:700;" 
+                                               placeholder="0" onkeyup="formatRupiah(this)" onblur="saveDetailStatus()">
+                                    </div>
+                                </div>
+
+                                <div id="detailNominalDisplay" class="mt-2 d-none"
+                                    style="font-size:0.85rem; font-weight:800; color:#1971c2; background:rgba(25,113,194,.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(25,113,194,.2);">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Row 2: Kualifikasi + Ikut Zoom + Tgl Update --}}
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:10px;">
+                    <div class="card-header py-2 border-0" style="background:#e9ecef; border-radius:10px 10px 0 0;">
+                        <span class="font-weight-bold text-dark" style="font-size:0.85rem;">
+                            <i class="fas fa-check-circle mr-1 text-primary"></i> Kualifikasi (B, A, T) &amp; Zoom
+                        </span>
+                    </div>
+                    <div class="card-body py-3">
+                        <div class="d-flex flex-wrap gap-3 align-items-center" style="gap:20px;">
+                            {{-- Budget --}}
+                            <div class="d-flex flex-column align-items-center" style="min-width:70px;">
+                                <span class="small text-muted mb-1 font-weight-bold">Budget (B)</span>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="detailBantBudget"
+                                        onchange="saveDetailBant('bant_budget', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="detailBantBudget"></label>
+                                </div>
+                            </div>
+                            {{-- Authority --}}
+                            <div class="d-flex flex-column align-items-center" style="min-width:70px;">
+                                <span class="small text-muted mb-1 font-weight-bold">Authority (A)</span>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="detailBantAuthority"
+                                        onchange="saveDetailBant('bant_authority', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="detailBantAuthority"></label>
+                                </div>
+                            </div>
+                            {{-- Time --}}
+                            <div class="d-flex flex-column align-items-center" style="min-width:70px;">
+                                <span class="small text-muted mb-1 font-weight-bold">Time (T)</span>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="detailBantTime"
+                                        onchange="saveDetailBant('bant_time', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="detailBantTime"></label>
+                                </div>
+                            </div>
+                            {{-- Divider --}}
+                            <div style="width:1px; height:40px; background:#dee2e6;"></div>
+                            {{-- Ikut Zoom --}}
+                            <div class="d-flex flex-column align-items-center" style="min-width:80px;">
+                                <span class="small text-muted mb-1 font-weight-bold">Ikut Zoom</span>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="detailIkutZoom"
+                                        onchange="saveDetailBant('ikut_zoom', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="detailIkutZoom"></label>
+                                </div>
+                            </div>
+                            {{-- Tgl Update --}}
+                            <div class="ml-auto text-right">
+                                <span class="small text-muted d-block">Terakhir Update</span>
+                                <span id="detailTglUpdate" class="font-weight-bold text-dark" style="font-size:0.9rem;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Row 3: History SalesPlan (Terintegrasi dengan Follow Up) --}}
+                <div class="card border-0 shadow-sm" style="border-radius:10px;">
+                    <div class="card-header py-2 border-0 d-flex justify-content-between align-items-center" style="background:#e9ecef; border-radius:10px 10px 0 0;">
+                        <span class="font-weight-bold text-dark" style="font-size:0.85rem;">
+                            <i class="fas fa-history mr-1 text-success"></i> Riwayat Kelas (SalesPlan)
+                        </span>
+                    </div>
+                    <div class="card-body py-2">
+                        {{-- List Kelas --}}
+                        <div id="detailSalesplanHistory">
+                            <span class="text-muted small">Tidak ada riwayat kelas.</span>
+                        </div>
+
+                        {{-- Section Expandable Follow Up --}}
+                        <div id="detailFollowupHistoryWrapper" class="mt-3 pt-2 border-top d-none">
+                            <p class="text-info font-weight-bold mb-2" style="font-size:0.75rem; text-transform:uppercase;">
+                                <i class="fas fa-comment-dots mr-1"></i> Catatan Follow Up
+                            </p>
+                            <div id="detailFollowupHistory" style="max-height:200px; overflow-y:auto;">
+                                <span class="text-muted small">Tidak ada riwayat follow up.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>{{-- end modal-body --}}
+
+            <div class="modal-footer border-0" style="background:#f4f6f9;">
+                <button type="button" class="btn btn-secondary btn-sm px-4" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// MODAL DETAIL PESERTA — JS Handler
+// ============================================================
+var _detailCurrentId = null;
+var _detailCanEdit   = false;
+
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-detail-peserta');
+    if (!btn) return;
+
+    _detailCurrentId = btn.dataset.id;
+    _detailCanEdit   = btn.dataset.canEdit === '1';
+
+    // --- Populate header info ---
+    document.getElementById('detailNama').textContent      = btn.dataset.nama      || '-';
+    document.getElementById('detailNoWa').textContent      = btn.dataset.noWa      || '-';
+    document.getElementById('detailInputOleh').textContent = btn.dataset.inputOleh || '-';
+    document.getElementById('detailUpdatedAt').textContent = btn.dataset.updatedAt || '-';
+    document.getElementById('detailTglUpdate').textContent = btn.dataset.updatedAt || '-';
+
+    // --- Riwayat Follow Up (Catatan) ---
+    var fuHtml = '';
+    var hasFu = false;
+    for (var i = 1; i <= 10; i++) {
+        var hasil = btn.dataset['fu' + i + 'Hasil'];
+        var at    = btn.dataset['fu' + i + 'At'];
+        var tl    = btn.dataset['fu' + i + 'TindakLanjut'];
+        
+        if (hasil && hasil !== '' && hasil !== 'null') {
+            hasFu = true;
+            fuHtml += '<div class="mb-3 pb-2 border-bottom">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-1">'
+                    + '<span class="badge badge-info" style="font-size:0.65rem;">Follow Up ' + i + '</span>'
+                    + '<small class="text-muted font-weight-bold">' + (at || '-') + '</small>'
+                    + '</div>'
+                    + '<div class="small font-weight-bold text-dark mb-1">Hasil: ' + hasil + '</div>'
+                    + (tl ? '<div class="small text-muted italic">Tindak Lanjut: ' + tl + '</div>' : '')
+                    + '</div>';
+        }
+    }
+    
+    // Add Archived History if exists
+    var spinHistory = btn.dataset.keteranganSpin || '';
+    if (spinHistory && spinHistory !== '' && spinHistory !== 'null' && spinHistory !== 'undefined') {
+        hasFu = true;
+        fuHtml += '<div class="mt-2 p-2 bg-light border-left border-info" style="border-width: 3px !important; white-space: pre-wrap; font-size: 0.75rem; border-radius: 4px;">'
+                + '<i class="fas fa-archive mr-1 text-info"></i> <strong>ARSIP CATATAN LAMA:</strong><br>'
+                + spinHistory
+                + '</div>';
+    }
+
+    if (!hasFu) {
+        fuHtml = '<span class="text-muted small">Tidak ada riwayat follow up.</span>';
+    }
+    document.getElementById('detailFollowupHistory').innerHTML = fuHtml;
+
+    // --- BANT + Zoom ---
+    document.getElementById('detailBantBudget').checked    = btn.dataset.bantBudget    === '1';
+    document.getElementById('detailBantAuthority').checked = btn.dataset.bantAuthority === '1';
+    document.getElementById('detailBantTime').checked      = btn.dataset.bantTime      === '1';
+    document.getElementById('detailIkutZoom').checked      = btn.dataset.ikutZoom      === '1';
+
+    var disabled = !_detailCanEdit;
+    document.getElementById('detailBantBudget').disabled    = disabled;
+    document.getElementById('detailBantAuthority').disabled = disabled;
+    document.getElementById('detailBantTime').disabled      = disabled;
+    document.getElementById('detailIkutZoom').disabled      = disabled;
+
+    // --- Potensi ---
+    var potensi = (btn.dataset.potensi || '').toUpperCase();
+    var potensiSelect = document.getElementById('detailPotensiSelect');
+    potensiSelect.value    = potensi;
+    potensiSelect.disabled = disabled;
+    toggleDetailKelasDropdown(potensi, btn.dataset.kelasId, JSON.parse(btn.dataset.kelas || '[]'));
+
+    // --- Status ---
+    var statusSelect = document.getElementById('detailStatusSelect');
+    var statusVal    = btn.dataset.status || 'cold';
+    statusSelect.value    = statusVal;
+    statusSelect.disabled = disabled;
+
+    var nominalVal = parseInt(btn.dataset.nominal || '0');
+    var nomInput   = document.getElementById('detailNominalInput');
+    var nomWrap    = document.getElementById('wrapperNominalBayar');
+    
+    if (statusVal === 'sudah_transfer') {
+        nomWrap.classList.remove('d-none');
+        nomInput.value = nominalVal > 0 ? nominalVal.toLocaleString('id-ID') : '';
+    } else {
+        nomWrap.classList.add('d-none');
+        nomInput.value = '';
+    }
+
+    // Still update display if needed
+    var nomDiv  = document.getElementById('detailNominalDisplay');
+    if (statusVal === 'sudah_transfer' && nominalVal > 0) {
+        nomDiv.textContent = 'Rp ' + nominalVal.toLocaleString('id-ID');
+        nomDiv.classList.remove('d-none');
+    } else {
+        nomDiv.classList.add('d-none');
+    }
+
+    // --- Salesplan history ---
+    var spData = JSON.parse(btn.dataset.salesplan || '[]');
+    var spHtml = '';
+    if (spData.length > 0) {
+        spData.forEach(function(sp) {
+            var statusColors = {
+                cold:'#6c757d', tertarik:'#f08c00', mau_transfer:'#0ca678',
+                sudah_transfer:'#1971c2', no:'#c92a2a'
+            };
+            var spColor = statusColors[sp.status] || '#6c757d';
+            spHtml += '<div class="d-flex align-items-center justify-content-between py-1 border-bottom">'
+                    + '<div class="d-flex align-items-center gap-2">'
+                    + '<span class="small font-weight-bold text-dark">' + sp.kelas + '</span>'
+                    + '<button type="button" class="btn btn-link p-0 text-info" style="font-size:0.65rem; text-decoration:none;" onclick="toggleDetailFollowup()">'
+                    + '<i class="fas fa-comment-dots"></i> Riwayat FU'
+                    + '</button>'
+                    + '</div>'
+                    + '<div class="d-flex align-items-center gap-2">'
+                    + '<span class="badge" style="background:' + spColor + '; color:#fff; border-radius:6px; font-size:0.7rem; padding:3px 8px;">' + sp.status.replace('_',' ').toUpperCase() + '</span>';
+            if (sp.nominal > 0) {
+                spHtml += '<span class="small text-primary font-weight-bold ml-1">Rp ' + parseInt(sp.nominal).toLocaleString('id-ID') + '</span>';
+            }
+            spHtml += '</div></div>';
+        });
+    } else {
+        spHtml = '<span class="text-muted small">Tidak ada riwayat kelas.</span>';
+    }
+    document.getElementById('detailSalesplanHistory').innerHTML = spHtml;
+
+    // Reset Followup Wrapper (Hide by default when opening new person)
+    document.getElementById('detailFollowupHistoryWrapper').classList.add('d-none');
+
+    // Show modal
+    $('#modalDetailPeserta').modal('show');
+});
+
+function refreshProspekData() {
+    if (!_detailCurrentId) return;
+    refreshProspekDataDirect(_detailCurrentId);
+}
+
+function refreshProspekDataDirect(id) {
+    if (!id) return;
+    
+    Swal.fire({
+        title: 'Reset & Arsip Data?',
+        text: 'Data kualifikasi (BANT, Potensi, Status) akan di-reset dan kartu Follow Up akan dikosongkan. Catatan saat ini akan otomatis masuk ke Riwayat (Arsip).',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Reset & Arsip!',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Memproses...',
+                text: 'Harap tunggu sebentar',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.post('{{ route("admin.database.reuse-data") }}', {
+                _token: '{{ csrf_token() }}',
+                id: id
+            }).done(function(r) {
+                if (r.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil di-reset!',
+                        text: 'Halaman akan dimuat ulang.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('Gagal!', r.message, 'error');
+                }
+            }).fail(function() {
+                Swal.fire('Error!', 'Terjadi kesalahan sistem.', 'error');
+            });
+        }
+    });
+}
+
+function toggleDetailFollowup() {
+    var wrapper = document.getElementById('detailFollowupHistoryWrapper');
+    wrapper.classList.toggle('d-none');
+}
+
+function toggleDetailKelasDropdown(potensi, selectedKelasId, kelasList) {
+    var wrap   = document.getElementById('detailPotensiKelasWrap');
+    var select = document.getElementById('detailKelasSelect');
+    if (potensi === 'MBC') {
+        wrap.classList.remove('d-none');
+        select.innerHTML = '<option value="">- Pilih Kelas MBC -</option>';
+        kelasList.forEach(function(k) {
+            var opt = document.createElement('option');
+            opt.value = k.id;
+            opt.textContent = k.nama;
+            if (String(k.id) === String(selectedKelasId)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    } else {
+        wrap.classList.add('d-none');
+    }
+}
+
+function saveDetailBant(field, value) {
+    if (!_detailCurrentId) return;
+    $.post('{{ route("admin.database.update-inline") }}', {
+        _token: '{{ csrf_token() }}',
+        id: _detailCurrentId,
+        field: field,
+        value: value
+    }).done(function(r) {
+        if (r.success) showDetailToast('Tersimpan!');
+    });
+}
+
+function saveDetailPotensi() {
+    if (!_detailCurrentId) return;
+    var val = document.getElementById('detailPotensiSelect').value;
+    var kelasList = [];
+    try {
+        var btn = document.querySelector('.btn-detail-peserta[data-id="' + _detailCurrentId + '"]');
+        if (btn) kelasList = JSON.parse(btn.dataset.kelas || '[]');
+    } catch(e) {}
+    toggleDetailKelasDropdown(val.toUpperCase(), '', kelasList);
+
+    $.post('{{ route("admin.database.update-inline") }}', {
+        _token: '{{ csrf_token() }}',
+        id: _detailCurrentId,
+        field: 'potensi',
+        value: val
+    }).done(function(r) {
+        if (r.success) showDetailToast('Potensi tersimpan!');
+    });
+}
+
+function saveDetailKelas() {
+    if (!_detailCurrentId) return;
+    var kelasId = document.getElementById('detailKelasSelect').value;
+    $.post('{{ route("admin.database.update-inline") }}', {
+        _token: '{{ csrf_token() }}',
+        id: _detailCurrentId,
+        field: 'kelas_id',
+        value: kelasId
+    }).done(function(r) {
+        if (r.success) showDetailToast('Kelas tersimpan!');
+    });
+}
+
+function saveDetailStatus() {
+    if (!_detailCurrentId) return;
+    var status = document.getElementById('detailStatusSelect').value;
+    var nominal = document.getElementById('detailNominalInput').value;
+    
+    // Toggle Nominal Wrapper
+    var wrap = document.getElementById('wrapperNominalBayar');
+    if (status === 'sudah_transfer') {
+        wrap.classList.remove('d-none');
+    } else {
+        wrap.classList.add('d-none');
+    }
+
+    $.post('{{ route("admin.database.update-status-direct") }}', {
+        _token: '{{ csrf_token() }}',
+        data_id: _detailCurrentId,
+        status: status,
+        nominal: nominal
+    }).done(function(r) {
+        if (r.success) {
+            showDetailToast('Status & Nominal tersimpan!');
+            
+            // --- AUTO OPEN SETTING PEMBAYARAN UNTUK M1T ---
+            if (status === 'sudah_transfer') {
+                var kelasSelect = document.getElementById('detailKelasSelect');
+                if (kelasSelect && kelasSelect.selectedIndex >= 0) {
+                    var selectedText = kelasSelect.options[kelasSelect.selectedIndex].text.toUpperCase();
+                    
+                    if (selectedText.includes('M1T') || selectedText.includes('MUSLIM INDONESIA')) {
+                        var name = document.getElementById('detailNama').textContent;
+                        
+                        // Tutup modal detail agar tidak tumpang tindih
+                        $('#modalDetailPeserta').modal('hide');
+                        
+                        // Tunggu sebentar agar modal pertama benar-benar tertutup baru buka yang kedua
+                        setTimeout(function() {
+                            if (window.showMonthSelectionModal) {
+                                window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
+                            }
+                        }, 500);
+                    }
+                }
+            }
+
+            // Update display if needed
+            if (status !== 'sudah_transfer') {
+                document.getElementById('detailNominalDisplay').classList.add('d-none');
+            }
+        }
+    });
+}
+
+function formatRupiah(input) {
+    let value = input.value.replace(/[^,\d]/g, '');
+    let split = value.split(',');
+    let sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        let separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    input.value = rupiah;
+}
+
+function updateStatusDirectTable(dataId, el) {
+    var status = el.value;
+    var name = el.dataset.nama || 'Peserta';
+    
+    // Config warna sama dengan row.blade.php
+    var statusConfig = {
+        'cold':           { bg: '#ffffff', text: '#6c757d' },
+        'tertarik':       { bg: '#F2F527', text: '#000000' },
+        'sudah_transfer': { bg: '#1786E6', text: '#ffffff' },
+        'no':             { bg: '#E61717', text: '#ffffff' }
+    };
+
+    var cfg = statusConfig[status] || statusConfig['cold'];
+    el.style.backgroundColor = cfg.bg;
+    el.style.color = cfg.text;
+
+    // Update row background too
+    var row = el.closest('tr');
+    if (row) {
+        row.style.backgroundColor = cfg.bg;
+        row.style.color = cfg.text;
+    }
+
+    $.post('{{ route("admin.database.update-status-direct") }}', {
+        _token: '{{ csrf_token() }}',
+        data_id: dataId,
+        status: status,
+        nominal: 0 // Default, akan diupdate di modal payment jika sudah_transfer
+    }).done(function(r) {
+        if (r.success) {
+            showDetailToast('Status diperbarui!');
+            
+            if (status === 'sudah_transfer') {
+                setTimeout(function() {
+                    if (window.showMonthSelectionModal) {
+                        // Buka modal pembayaran M1T (Default nominal & level Grow Up as previously requested/implemented)
+                        window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
+                    }
+                }, 500);
+            }
+        } else {
+            Swal.fire('Gagal!', r.message || 'Gagal update status', 'error');
+        }
+    }).fail(function() {
+        Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+    });
+}
+
+function showDetailToast(msg) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;right:20px;background:#28a745;color:#fff;padding:8px 18px;border-radius:8px;font-size:0.85rem;font-weight:700;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .4s;';
+    toast.textContent = '✓ ' + msg;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 400); }, 1500);
+}
+    // --- Read More Toggle ---
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.btn-read-more', function(e) {
+            e.preventDefault();
+            var container = $(this).siblings('.read-more-container');
+            var type = container.data('type');
+            container.toggleClass('expanded');
+            
+            if (container.hasClass('expanded')) {
+                $(this).text('Sembunyikan');
+            } else {
+                $(this).text(type === 'situasi' ? 'Baca Situasi' : 'Baca Kendala');
+            }
+        });
+    });
+
+    // --- Filter Potensi Dynamic Dropdown ---
+    $('#filterPotensi').on('change', function() {
+        if ($(this).val() === 'MBC') {
+            $('#filterKelasWrap').removeClass('d-none');
+        } else {
+            $('#filterKelasWrap').addClass('d-none');
+            $('#filterKelasId').val('');
+        }
+    });
+</script>
 @endsection

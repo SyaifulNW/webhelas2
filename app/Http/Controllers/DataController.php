@@ -40,7 +40,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             
             $newData->save();
 
-            $kelas = Kelas::select('id', 'nama_kelas')->orderBy('nama_kelas')->get();
+            $kelas = Kelas::select('id', 'nama_kelas', 'tanggal_selesai')->orderBy('nama_kelas')->get();
             // Gunakan view partial yang sama dengan loop utama untuk konsistensi
             $html = view('admin.database.partials.row', [
                 'item' => $newData,
@@ -96,7 +96,10 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $csFilter    = $request->input('cs_name');
         $chapterFilter = $request->input('chapter_id');
         $bulanFilter = $request->input('bulan');
-        $tahunFilter = $request->input('tahun'); // Tambah filter tahun
+        $tahunFilter = $request->input('tahun');
+        $statusFilter = $request->input('status');
+        $potensiFilter = $request->input('potensi');
+        $kelasIdFilter = $request->input('kelas_id');
         $searchFilter = $request->input('search');
         $perPage     = 50;
 
@@ -196,6 +199,23 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
 
         if (!empty($tahunFilter)) {
             $query->whereYear('created_at', $tahunFilter);
+        }
+
+        // Filter Status Follow Up (from latest SalesPlan)
+        if (!empty($statusFilter)) {
+            $query->whereHas('salesplan', function($q) use ($statusFilter) {
+                $q->where('status', $statusFilter);
+            });
+        }
+
+        // Filter Potensi Kelas
+        if (!empty($potensiFilter)) {
+            $query->where('potensi', $potensiFilter);
+        }
+
+        // Filter Nama Kelas (dari dropdown dinamis MBC)
+        if (!empty($kelasIdFilter)) {
+            $query->where('kelas_id', $kelasIdFilter);
         }
 
         // New Filters (Server Side)
@@ -425,7 +445,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $kurang = max($target - $databaseBaru, 0);
 
         $data = $query->paginate($perPage)->withQueryString();
-        $kelas = \App\Models\Kelas::select('id', 'nama_kelas')->orderBy('nama_kelas')->get();
+        $kelas = \App\Models\Kelas::select('id', 'nama_kelas', 'tanggal_selesai')->orderBy('nama_kelas')->get();
 
         // Fetch lists for filters
         $provinsiList = \App\Models\Data::select('provinsi_nama')
@@ -909,13 +929,20 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         {
             $dataId = $request->data_id;
             $newStatus = $request->status;
+            $nominalVal = $request->nominal; // New parameter
             
             $data = Data::findOrFail($dataId);
+            $userRole = strtolower(auth()->user()->role);
             
             // Assume default class if none set
             $kelasId = $data->kelas_id;
-            if (!$kelasId) {
-                // Find M1T (Start-Up Muslim Indonesia) class ID
+            
+            // For Chapter/Reseller, strictly use M1T
+            if (in_array($userRole, ['chapter', 'reseller'])) {
+                $m1tClass = Kelas::where('nama_kelas', 'like', '%Muslim Indonesia%')->first();
+                $kelasId = $m1tClass ? $m1tClass->id : ($kelasId ?: 1);
+            } elseif (!$kelasId) {
+                // Find M1T (Start-Up Muslim Indonesia) class ID as fallback
                 $m1tClass = Kelas::where('nama_kelas', 'like', '%Muslim Indonesia%')->first();
                 $kelasId = $m1tClass ? $m1tClass->id : 1; 
             }
@@ -952,6 +979,13 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             
             $oldStatus = $plan->status ?? 'new';
             $plan->status = $newStatus;
+            
+            // Save nominal if provided
+            if ($nominalVal !== null) {
+                $cleanNominal = preg_replace('/[^0-9]/', '', $nominalVal);
+                $plan->nominal = (int)$cleanNominal;
+            }
+            
             $plan->save();
 
             // Auto update data status
@@ -1181,15 +1215,36 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             $data->bant_budget = false;
             $data->bant_authority = false;
             $data->bant_time = false;
+            $data->ikut_zoom = false;
             $data->status_peserta = 'peserta_baru'; // Reset to fresh lead status
             
-            // Clear interaction history (FU1 - FU10)
+            // Archive existing FU history to keterangan_spin before clearing
+            $oldHistory = $data->keterangan_spin ? $data->keterangan_spin . "\n\n" : "";
+            $hasOldLogs = false;
+            $archiveLogs = "--- ARSIP FOLLOW UP (" . date('d/m/Y H:i') . ") ---\n";
+            
             for ($i = 1; $i <= 10; $i++) {
+                $hasil = $data->{"fu{$i}_hasil"};
+                $at    = $data->{"fu{$i}_at"};
+                $tl    = $data->{"fu{$i}_tindak_lanjut"};
+                
+                if ($hasil) {
+                    $hasOldLogs = true;
+                    $archiveLogs .= "FU{$i} [" . ($at ? $at->format('d/m/Y H:i') : '-') . "]: {$hasil}";
+                    if ($tl) $archiveLogs .= " | TL: {$tl}";
+                    $archiveLogs .= "\n";
+                }
+                
+                // Clear the actual fields for the new cycle
                 $data->{"fu{$i}_hasil"} = null;
                 $data->{"fu{$i}_tindak_lanjut"} = null;
                 $data->{"fu{$i}_wa"} = 0;
                 $data->{"fu{$i}_telp"} = 0;
                 $data->{"fu{$i}_at"} = null;
+            }
+            
+            if ($hasOldLogs) {
+                $data->keterangan_spin = $oldHistory . $archiveLogs;
             }
             
             $data->save();
@@ -1207,6 +1262,18 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function noPotensi($id)
+    {
+        try {
+            $data = Data::findOrFail($id);
+            $data->is_no_potensi = true;
+            $data->save();
+            return redirect()->back()->with('success', 'Data berhasil ditandai sebagai Tidak Potensi.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal memproses data.');
         }
     }
 }

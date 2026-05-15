@@ -811,10 +811,17 @@
                             </a>
                         </li>
                         
-                        <li class="nav-item {{ (request()->routeIs('admin.salesplan.index') && request('type') == 'mbc') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('admin.salesplan.index', ['type' => 'mbc']) }}">
-                                <i class="fas fa-fw fa-users"></i>
-                                <span><strong>PESERTA MBC</strong></span>
+                        <li class="nav-item {{ (request()->routeIs('admin.database.database') && request('view_type') == 'chapter') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('admin.database.database', ['view_type' => 'chapter']) }}">
+                                <i class="fas fa-fw fa-university"></i>
+                                <span><strong>DATABASE CHAPTER</strong></span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item {{ (request()->routeIs('admin.database.database') && request('view_type') == 'chapter') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('admin.database.database', ['view_type' => 'chapter']) }}">
+                                <i class="fas fa-fw fa-users-cog"></i>
+                                <span><strong>DATABASE AGEN</strong></span>
                             </a>
                         </li>
 
@@ -829,6 +836,13 @@
                             <a class="nav-link" href="{{ route('programkerja.index') }}">
                                 <i class="fas fa-fw fa-tasks"></i>
                                 <span><strong>PROGRAM KERJA</strong></span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item {{ request()->routeIs('gantt.index') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('gantt.index') }}">
+                                <i class="fas fa-fw fa-project-diagram"></i>
+                                <span><strong>GANCHART</strong></span>
                             </a>
                         </li>
 

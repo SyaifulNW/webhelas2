@@ -399,7 +399,7 @@ apakah anda tertarik, untuk mendengarkan informasinya. : <span class="text-dange
         </div>
 
         <div class="card-question text-center bg-light d-none">
-            <h5 class="fw-bold mb-0">REKAP PENILAIAN</h5>
+            <h5 class="fw-bold mb-0">RIWAYAT FOLLOW UP</h5>
             <p class="text-muted small mb-1">Total Skor: <span id="display_score" class="fw-bold text-primary">0</span> / 51</p>
             <p class="mb-0 fw-bold">Kategori: <span id="display_category" class="text-secondary">-</span></p>
         </div>

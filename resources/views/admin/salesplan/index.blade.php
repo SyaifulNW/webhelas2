@@ -1112,6 +1112,9 @@ $(document).ready(function() {
                              @if(false) {{-- Komentar Atasan Dihapus --}}
                              <th rowspan="3" style="min-width: 200px;">Komentar Atasan</th>
                              @endif
+                             @if($isSmiClass || request('type') == 'smi' || request('type') == 'mbc')
+                             <th rowspan="3" style="min-width: 140px;">Pembayaran</th>
+                             @endif
                             <th rowspan="3">Aksi</th>
                         </tr>
                         <tr>
@@ -1253,27 +1256,7 @@ $(document).ready(function() {
                                     <option value="no" {{ $plan->status == 'no' ? 'selected' : '' }}>No</option>
                                 </select>
 
-                                {{-- Tombol Pilih Bulan (Hanya untuk SMI/SMI type atau Row dengan Kelas SMI) --}}
-                                @if($kelasFilter == 'Start-Up Muslim Indonesia' || request('type') == 'smi' || (isset($plan->kelas) && str_contains($plan->kelas->nama_kelas, 'Muslim Indonesia')))
-                                <div class="month-selection-container mt-1 d-none" 
-                                     id="month-container-{{ $plan->id }}">
-                                    <button type="button" class="btn btn-xs btn-primary w-100 btn-month-modal-trigger shadowed-btn" 
-                                        data-id="{{ $plan->id }}"
-                                        data-name="{{ $plan->nama }}"
-                                        data-selection='@json($plan->selected_months ?? [])'
-                                        data-tanggal-masuk="{{ $plan->pesertaSmi ? ($plan->pesertaSmi->tanggal_masuk ? \Carbon\Carbon::parse($plan->pesertaSmi->tanggal_masuk)->format('Y-m-d') : '') : '' }}"
-                                        data-tanggal-selesai="{{ $plan->pesertaSmi ? ($plan->pesertaSmi->tanggal_selesai ? \Carbon\Carbon::parse($plan->pesertaSmi->tanggal_selesai)->format('Y-m-d') : '') : '' }}"
-                                        data-spp-awal="{{ $plan->pesertaSmi ? $plan->pesertaSmi->spp_awal : '' }}"
-                                        data-biaya-pendaftaran="{{ $plan->pesertaSmi ? $plan->pesertaSmi->biaya_pendaftaran : '' }}"
-                                        data-pembayaran-spp="{{ $plan->pesertaSmi ? $plan->pesertaSmi->pembayaran_spp : '' }}"
-                                        data-total-pembayaran="{{ $plan->pesertaSmi ? $plan->pesertaSmi->total_pembayaran : '' }}"
-                                        data-level="{{ $plan->level }}"
-                                        data-tanggal-closing="{{ $plan->tanggal_closing ? $plan->tanggal_closing->format('Y-m-d') : '' }}"
-                                        style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                                        <i class="fas fa-calendar-alt mr-1"></i> SETTING PEMBAYARAN
-                                    </button>
-                                </div>
-                                @endif
+                                </select>
                             </td>
 
                             {{-- <td>{{ $plan->situasi_bisnis ?? '-' }}</td> --}}
@@ -1385,6 +1368,27 @@ $(document).ready(function() {
                                      data-id="{{ $plan->id }}"
                                      data-field="komentar_atasan">
                                      {{ $plan->komentar_atasan ?? '' }}
+                                 </td>
+                                 @endif
+
+                                 {{-- Isi Kolom Setting Pembayaran Baru --}}
+                                 @if($isSmiClass || request('type') == 'smi' || request('type') == 'mbc')
+                                 <td class="text-center">
+                                     <button type="button" class="btn btn-xs btn-info w-100 btn-month-modal-trigger shadowed-btn py-2" 
+                                         data-id="{{ $plan->id }}"
+                                         data-name="{{ $plan->nama }}"
+                                         data-selection='@json($plan->selected_months ?? [])'
+                                         data-tanggal-masuk="{{ $plan->pesertaSmi ? ($plan->pesertaSmi->tanggal_masuk ? \Carbon\Carbon::parse($plan->pesertaSmi->tanggal_masuk)->format('Y-m-d') : '') : '' }}"
+                                         data-tanggal-selesai="{{ $plan->pesertaSmi ? ($plan->pesertaSmi->tanggal_selesai ? \Carbon\Carbon::parse($plan->pesertaSmi->tanggal_selesai)->format('Y-m-d') : '') : '' }}"
+                                         data-spp-awal="{{ $plan->pesertaSmi ? $plan->pesertaSmi->spp_awal : '' }}"
+                                         data-biaya-pendaftaran="{{ $plan->pesertaSmi ? $plan->pesertaSmi->biaya_pendaftaran : '' }}"
+                                         data-pembayaran-spp="{{ $plan->pesertaSmi ? $plan->pesertaSmi->pembayaran_spp : '' }}"
+                                         data-total-pembayaran="{{ $plan->pesertaSmi ? $plan->pesertaSmi->total_pembayaran : '' }}"
+                                         data-level="{{ $plan->level }}"
+                                         data-tanggal-closing="{{ $plan->tanggal_closing ? $plan->tanggal_closing->format('Y-m-d') : '' }}"
+                                         style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px; background: #17a2b8; border: 2px solid #fff;">
+                                         <i class="fas fa-wallet mr-1"></i> SETTING PEMBAYARAN
+                                     </button>
                                  </td>
                                  @endif
 
@@ -1972,6 +1976,9 @@ $(document).ready(function() {
                 <th style="padding: 10px; border: 1px solid #ccc;">Keterangan</th>
                 <th style="padding: 10px; border: 1px solid #ccc;">Tanggal Closing</th>
                 <th style="padding: 10px; border: 1px solid #ccc;">Nama CS Closing</th>
+                @if($kelasFilter == 'Start-Up Muslim Indonesia' || request('type') == 'smi' || request('type') == 'mbc')
+                <th style="padding: 10px; border: 1px solid #ccc;">Setting</th>
+                @endif
             </tr>
         </thead>
    <tbody>
@@ -2053,6 +2060,27 @@ $(document).ready(function() {
             <td style="padding: 8px; border: 1px solid #ccc;">
                 {{ \App\Models\User::find($p->created_by)->name ?? '-' }}
             </td>
+            
+            {{-- Tombol Setting Pembayaran Khusus M1T --}}
+            @if($isSmiClass || request('type') == 'smi' || request('type') == 'mbc')
+            <td style="padding: 8px; border: 1px solid #ccc;">
+                <button type="button" class="btn btn-xs btn-info w-100 btn-month-modal-trigger shadowed-btn py-2" 
+                    data-id="{{ $p->id }}"
+                    data-name="{{ $p->nama }}"
+                    data-selection='@json($p->selected_months ?? [])'
+                    data-tanggal-masuk="{{ $p->pesertaSmi ? ($p->pesertaSmi->tanggal_masuk ? \Carbon\Carbon::parse($p->pesertaSmi->tanggal_masuk)->format('Y-m-d') : '') : '' }}"
+                    data-tanggal-selesai="{{ $p->pesertaSmi ? ($p->pesertaSmi->tanggal_selesai ? \Carbon\Carbon::parse($p->pesertaSmi->tanggal_selesai)->format('Y-m-d') : '') : '' }}"
+                    data-spp-awal="{{ $p->pesertaSmi ? $p->pesertaSmi->spp_awal : '' }}"
+                    data-biaya-pendaftaran="{{ $p->pesertaSmi ? $p->pesertaSmi->biaya_pendaftaran : '' }}"
+                    data-pembayaran-spp="{{ $p->pesertaSmi ? $p->pesertaSmi->pembayaran_spp : '' }}"
+                    data-total-pembayaran="{{ $p->pesertaSmi ? $p->pesertaSmi->total_pembayaran : '' }}"
+                    data-level="{{ $p->level }}"
+                    data-tanggal-closing="{{ $p->tanggal_closing ? \Carbon\Carbon::parse($p->tanggal_closing)->format('Y-m-d') : '' }}"
+                    style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px; background: #17a2b8; border: 2px solid #fff;">
+                    <i class="fas fa-wallet mr-1"></i> SETTING
+                </button>
+            </td>
+            @endif
         </tr>
         @php 
             $totalNominal += $p->nominal; 
@@ -2072,7 +2100,7 @@ $(document).ready(function() {
         @endphp
     @empty
         <tr>
-            <td colspan="{{ ($isCsMbc || $kelasFilter == 'Start-Up Muslim Indonesia' || request('type') == 'smi' || request('type') == 'mbc') ? 7 : 5 }}" style="text-align: center; padding: 15px; color: #999;">
+            <td colspan="{{ ($isCsMbc || $kelasFilter == 'Start-Up Muslim Indonesia' || request('type') == 'smi' || request('type') == 'mbc') ? 8 : 5 }}" style="text-align: center; padding: 15px; color: #999;">
                 Prospek belum ada
             </td>
         </tr>
@@ -2088,7 +2116,7 @@ $(document).ready(function() {
                         <span>{{ number_format((request('type') == 'smi' || $kelasFilter == 'Start-Up Muslim Indonesia') ? $totalSppAwal : $totalNominal, 0, ',', '.') }}</span>
                     </div>
                 </td>
-                <td colspan="3" style="border: 1px solid #ccc;"></td>
+                <td colspan="4" style="border: 1px solid #ccc;"></td>
             </tr>
 
             <!-- Target Omset -->

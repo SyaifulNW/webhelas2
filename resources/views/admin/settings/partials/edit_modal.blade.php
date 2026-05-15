@@ -31,15 +31,36 @@
                     </div>
                     <div class="form-group chapter-field-container font-weight-bold"
                         style="display: {{ in_array($u->role, ['chapter', 'reseller']) ? 'block' : 'none' }};">
-                        <label>Pilih Chapter</label>
-                        <select name="chapter" class="form-control chapter-select" data-current="{{ $u->chapter }}">
-                            <option value="">-- Pilih Chapter --</option>
-                            @foreach(['Cirebon', 'Kalimantan Timur', 'Depok', 'Jakarta', 'Makassar', 'Tangerang', 'Lampung', 'Kediri'] as $chap)
-                                <option value="{{ $chap }}" {{ ($u->chapter ?? '') == $chap ? 'selected' : '' }}>
-                                    {{ $chap }}
-                                </option>
-                            @endforeach
-                        </select>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="mb-0">Pilih Chapter</label>
+                            <button type="button" class="btn btn-xs btn-outline-primary btn-add-chapter-toggle" style="font-size: 0.65rem; padding: 2px 8px;">
+                                <i class="fas fa-plus mr-1"></i>Tambah Chapter
+                            </button>
+                        </div>
+                        
+                        <div class="chapter-select-wrapper">
+                            <select name="chapter" class="form-control chapter-select" data-current="{{ $u->chapter }}">
+                                <option value="">-- Pilih Chapter --</option>
+                                @foreach(['Cirebon', 'Kalimantan Timur', 'Depok', 'Jakarta', 'Makassar', 'Tangerang', 'Lampung', 'Kediri'] as $chap)
+                                    <option value="{{ $chap }}" {{ ($u->chapter ?? '') == $chap ? 'selected' : '' }}>
+                                        {{ $chap }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="chapter-input-wrapper mt-1" style="display: none;">
+                            <div class="input-group">
+                                <input type="text" class="form-control new-chapter-input" placeholder="Tulis Nama Chapter Baru...">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-sm btn-secondary btn-cancel-new-chapter">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-info mt-1 d-block font-weight-normal" style="font-size: 0.7rem;"><i class="fas fa-info-circle mr-1"></i>Chapter baru akan otomatis tersimpan saat user disimpan.</small>
+                        </div>
                     </div>
                     <div class="form-group font-weight-bold">
                         <label>Password (Kosongkan jika tidak diganti)</label>

@@ -372,6 +372,7 @@ Route::post('/data/{id}/pindah-ke-salesplan', [DataController::class, 'pindahkes
 Route::get('/pindah-ke-alumni/{id}', [DataController::class, 'alumni'])->name('data.pindahKeAlumni');
 Route::get('/pindah-ke-salesplan/{id}', [DataController::class, 'pindahkesalesplan'])->name('data.pindahKeSalesPlan');
 Route::delete('/admin/database/delete/{id}', [DataController::class, 'destroy'])->name('delete-database');
+Route::post('/admin/database/no-potensi/{id}', [DataController::class, 'noPotensi'])->name('admin.database.no-potensi');
 
 Route::get('/ongkir/provinsi', [OngkirController::class, 'getProvinsi'])->name('ongkir.provinsi');
 Route::get('/ongkir/kota', [OngkirController::class, 'getKota'])->name('ongkir.kota');

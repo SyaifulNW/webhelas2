@@ -23,12 +23,7 @@
             <li class="nav-item">
                 <a class="nav-link" id="target-tab" data-toggle="tab" href="#target" role="tab">Target Omset</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" id="menus-tab" data-toggle="tab" href="#menus" role="tab">Menu Global</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="rolemenu-tab" data-toggle="tab" href="#rolemenu" role="tab">Akses Menu Role</a>
-            </li>
+
         </ul>
 
         <div class="tab-content" id="settingTabContent">
@@ -286,84 +281,7 @@
                 </form>
             </div>
 
-            {{-- TAB 3: MENUS MANAGEMENT (GLOBAL) --}}
-            <div class="tab-pane fade p-3 bg-white border border-top-0" id="menus" role="tabpanel">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Pengaturan ini akan mengaktifkan/menonaktifkan menu secara
-                    <strong>GLOBAL</strong> untuk semua user.
-                </div>
-                <table class="table table-bordered">
-                    <thead class="bg-dark text-white">
-                        <tr>
-                            <th>Label Menu</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($menus as $m)
-                            <tr>
-                                <td>{{ $m->label }}</td>
-                                <td>
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input menu-toggle" id="switch{{ $m->id }}"
-                                            data-id="{{ $m->id }}" {{ $m->is_active ? 'checked' : '' }}>
-                                        <label class="custom-control-label" for="switch{{ $m->id }}">
-                                            {{ $m->is_active ? 'Aktif' : 'Non-Aktif' }}
-                                        </label>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
 
-            {{-- TAB 4: ROLE MENU ACCESS --}}
-            <div class="tab-pane fade p-3 bg-white border border-top-0" id="rolemenu" role="tabpanel">
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> Atur akses menu spesifik per Role. Jika Menu Global
-                    non-aktif, maka menu tetap tidak muncul meski di sini aktif.
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped text-center">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th class="text-left">Role / Menu</th>
-                                @foreach($menus as $m)
-                                    <th>{{ $m->label }}</th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($roles as $role)
-                                <tr>
-                                    <td class="text-left font-weight-bold">{{ ucfirst($role) }}</td>
-                                    @foreach($menus as $m)
-                                        @php
-                                            try {
-                                                $canAccess = \DB::table('role_menus')
-                                                    ->where('role', $role)
-                                                    ->where('menu_id', $m->id)
-                                                    ->value('can_access') ?? true;
-                                            } catch (\Exception $e) {
-                                                $canAccess = true; // Fallback if table doesn't exist
-                                            }
-                                        @endphp
-                                        <td>
-                                            <div class="custom-control custom-switch">
-                                                <input type="checkbox" class="custom-control-input role-menu-toggle"
-                                                    id="role-{{ $role }}-{{ $m->id }}" data-role="{{ $role }}"
-                                                    data-menuid="{{ $m->id }}" {{ $canAccess ? 'checked' : '' }}>
-                                                <label class="custom-control-label" for="role-{{ $role }}-{{ $m->id }}"></label>
-                                            </div>
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
         </div>
     </div>
@@ -402,13 +320,33 @@
                             </select>
                         </div>
                         <div class="form-group chapter-field-container" style="display: none;">
-                            <label>Pilih Chapter</label>
-                            <select name="chapter" class="form-control chapter-select" data-current="">
-                                <option value="">-- Pilih Chapter --</option>
-                                @foreach(['Cirebon', 'Kalimantan Timur', 'Depok', 'Jakarta', 'Makassar', 'Tangerang', 'Lampung', 'Kediri'] as $chap)
-                                    <option value="{{ $chap }}">{{ $chap }}</option>
-                                @endforeach
-                            </select>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="mb-0">Pilih Chapter</label>
+                                <button type="button" class="btn btn-xs btn-outline-primary btn-add-chapter-toggle" style="font-size: 0.65rem; padding: 2px 8px;">
+                                    <i class="fas fa-plus mr-1"></i>Tambah Chapter
+                                </button>
+                            </div>
+                            
+                            <div class="chapter-select-wrapper">
+                                <select name="chapter" class="form-control chapter-select" data-current="">
+                                    <option value="">-- Pilih Chapter --</option>
+                                    @foreach(['Cirebon', 'Kalimantan Timur', 'Depok', 'Jakarta', 'Makassar', 'Tangerang', 'Lampung', 'Kediri'] as $chap)
+                                        <option value="{{ $chap }}">{{ $chap }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="chapter-input-wrapper mt-1" style="display: none;">
+                                <div class="input-group">
+                                    <input type="text" class="form-control new-chapter-input" placeholder="Tulis Nama Chapter Baru...">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-sm btn-secondary btn-cancel-new-chapter">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-info mt-1 d-block"><i class="fas fa-info-circle mr-1"></i>Chapter baru akan otomatis tersimpan saat user disimpan.</small>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Password</label>
@@ -472,32 +410,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        // AJAX Toggle Menu Global
-        document.querySelectorAll('.menu-toggle').forEach(item => {
-            item.addEventListener('change', event => {
-                const id = event.target.dataset.id;
-                const active = event.target.checked ? 1 : 0;
-                const label = event.target.nextElementSibling;
 
-                label.textContent = active ? 'Aktif' : 'Non-Aktif';
-
-                fetch('{{ Route::has('admin.settings.menus.toggle') ? route('admin.settings.menus.toggle') : '/admin/settings/menus/toggle' }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ id: id, active: active })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.success) {
-                            Swal.fire('Gagal!', 'Gagal mengubah status menu', 'error');
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            });
-        });
 
         // AJAX Toggle Status User
         document.querySelectorAll('.user-toggle').forEach(item => {
@@ -535,34 +448,7 @@
             });
         });
 
-        // AJAX Toggle Role Menu Access
-        document.querySelectorAll('.role-menu-toggle').forEach(item => {
-            item.addEventListener('change', event => {
-                const role = event.target.dataset.role;
-                const menu_id = event.target.dataset.menuid;
-                const active = event.target.checked ? 1 : 0;
 
-                console.log(`Updating role ${role} menu ${menu_id} access to ${active}`);
-
-                fetch('{{ Route::has('admin.settings.role-menus.update') ? route('admin.settings.role-menus.update') : '/admin/settings/role-menus/update' }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ role: role, menu_id: menu_id, active: active })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Beri feedback toast jika perlu
-                        } else {
-                            Swal.fire('Gagal!', 'Gagal mengubah akses menu role', 'error');
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            });
-        });
 
         // SweetAlert Konfirmasi Hapus
         $('.delete-btn').on('click', function (e) {
@@ -690,6 +576,20 @@
                     });
                 }
             });
+        });
+        // Toggle New Chapter Input
+        $(document).on('click', '.btn-add-chapter-toggle', function() {
+            let container = $(this).closest('.chapter-field-container');
+            container.find('.chapter-select-wrapper').hide().find('select').removeAttr('name').attr('required', false);
+            container.find('.chapter-input-wrapper').show().find('input').attr('name', 'chapter').attr('required', true).focus();
+            $(this).hide();
+        });
+
+        $(document).on('click', '.btn-cancel-new-chapter', function() {
+            let container = $(this).closest('.chapter-field-container');
+            container.find('.chapter-input-wrapper').hide().find('input').removeAttr('name').attr('required', false).val('');
+            container.find('.chapter-select-wrapper').show().find('select').attr('name', 'chapter').attr('required', true);
+            container.find('.btn-add-chapter-toggle').show();
         });
     </script>
 @endsection

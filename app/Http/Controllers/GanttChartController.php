@@ -27,7 +27,7 @@ class GanttChartController extends Controller
 
         // Determine who the target user is (either the person being viewed, or the logged in user)
         $targetUser = $user;
-        if ($targetUserId) {
+        if ($targetUserId && $role !== 'operasional') {
             $foundUser = \App\Models\User::find($targetUserId);
             if ($foundUser) {
                 // Determine if the logged-in user is allowed to view this person (usually yes, based on previous reqs)
