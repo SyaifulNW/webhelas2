@@ -895,9 +895,11 @@ public function operasionalDashboard(Request $request)
     $role = 'operasional';
 
     $monitoringPerbaikan = \App\Models\MonitoringPerbaikan::orderBy('created_at', 'desc')->get();
+    $pengadaanBarang = \App\Models\PengadaanBarang::orderBy('created_at', 'desc')->get();
+    $inventarisKantor = \App\Models\InventarisKantor::orderBy('lokasi')->orderBy('created_at', 'desc')->get();
 
     return view('operasional.dashboard', compact(
-        'role', 'kelasOmsetFiltered', 'totalNilaiHasil', 'historyNilai', 'bulan', 'namaBulan', 'tahun', 'csName', 'monitoringPerbaikan'
+        'role', 'kelasOmsetFiltered', 'totalNilaiHasil', 'historyNilai', 'bulan', 'namaBulan', 'tahun', 'csName', 'monitoringPerbaikan', 'pengadaanBarang', 'inventarisKantor'
     ));
 }
 }

@@ -10,7 +10,7 @@ class MonitoringPerbaikanController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'fasilitas' => 'required|string',
+            'fasilitas' => 'nullable|string',
             'kerusakan' => 'nullable|string',
             'timeline'  => 'nullable|string',
             'tanggal_mulai' => 'nullable|date',
@@ -27,7 +27,7 @@ class MonitoringPerbaikanController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'fasilitas' => 'required|string',
+            'fasilitas' => 'nullable|string',
             'kerusakan' => 'nullable|string',
             'timeline'  => 'nullable|string',
             'tanggal_mulai' => 'nullable|date',

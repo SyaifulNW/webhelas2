@@ -17,7 +17,7 @@ class ProgramKerjaController extends Controller
     {
         $user = Auth::user();
         $viewRole = $request->query('view_role');
-        $isRafiRofi = stripos($user->name, 'Rafi') !== false || stripos($user->name, 'Rofi') !== false;
+        $isRafiRofi = preg_match('/Rafi|Rofi/i', $user->name);
 
         $query = ProgramKerja::with('inisiatifs')
             ->orderBy('created_at', 'asc');
@@ -49,7 +49,7 @@ class ProgramKerjaController extends Controller
             $query->where('created_by_role', 'manager');
         }
         // Jika role adalah chapter atau reseller → lihat yang dia buat sendiri
-        else if (in_array($userRole, ['chapter', 'reseller'])) {
+        else if (in_array($userRole, ['chapter', 'reseller', 'agen'])) {
             $query->where(function ($q) use ($user) {
                 $q->where('created_by', $user->id)
                     ->orWhereHas('inisiatifs', function ($sub) use ($user) {
@@ -59,40 +59,48 @@ class ProgramKerjaController extends Controller
         }
         // Jika role lain -> lihat yang dia buat ATAU yang dia jadi PIC (Default Produksi)
         else {
-            $isFelmi = stripos($user->name, 'Felmi') !== false;
-
-            if ($isFelmi) {
-                // Felmi: KHUSUS yang dia jadi PIC saja
-                $query->whereHas('inisiatifs', function ($sub) use ($user) {
-                    $sub->where('pic', $user->name);
-                });
-
-                $query->with([
-                    'inisiatifs' => function ($sub) use ($user) {
-                        $sub->where('pic', $user->name);
-                    }
-                ]);
-            } else {
-                // Yang lain: Yang dia buat ATAU yang dia jadi PIC 
-                // (Tetap saring produksi sebagai default jika mereka tidak membuat sendiri)
-                $query->where(function ($q) use ($user) {
+            // Jika dia adalah Operasional tapi BUKAN Rafi/Rofi, tetap batasi ke inputan sendiri atau produksi
+            if ($userRole === 'operasional') {
+                 $query->where(function ($q) use ($user) {
                     $q->where('created_by', $user->id)
-                        ->orWhere('created_by_role', 'produksi') // Izinkan lihat produksi sebagai monitoring
-                        ->orWhereHas('inisiatifs', function ($sub) use ($user) {
-                            $sub->where('pic', $user->name);
-                        });
+                        ->orWhere('created_by_role', 'produksi');
                 });
+            } else {
+                $isFelmi = stripos($user->name, 'Felmi') !== false;
 
-                // Saring Inisiatif didalamnya agar hanya menampilkan yang berhubungan dengannya
-                $query->with([
-                    'inisiatifs' => function ($sub) use ($user) {
-                        $sub->where('pic', $user->name)
-                            ->orWhereHas('programKerja', function ($prog) use ($user) {
-                                $prog->where('created_by', $user->id)
-                                    ->orWhere('created_by_role', 'produksi');
+                if ($isFelmi) {
+                    // Felmi: KHUSUS yang dia jadi PIC saja
+                    $query->whereHas('inisiatifs', function ($sub) use ($user) {
+                        $sub->where('pic', $user->name);
+                    });
+    
+                    $query->with([
+                        'inisiatifs' => function ($sub) use ($user) {
+                            $sub->where('pic', $user->name);
+                        }
+                    ]);
+                } else {
+                    // Yang lain: Yang dia buat ATAU yang dia jadi PIC 
+                    // (Tetap saring produksi sebagai default jika mereka tidak membuat sendiri)
+                    $query->where(function ($q) use ($user) {
+                        $q->where('created_by', $user->id)
+                            ->orWhere('created_by_role', 'produksi') // Izinkan lihat produksi sebagai monitoring
+                            ->orWhereHas('inisiatifs', function ($sub) use ($user) {
+                                $sub->where('pic', $user->name);
                             });
-                    }
-                ]);
+                    });
+    
+                    // Saring Inisiatif didalamnya agar hanya menampilkan yang berhubungan dengannya
+                    $query->with([
+                        'inisiatifs' => function ($sub) use ($user) {
+                            $sub->where('pic', $user->name)
+                                ->orWhereHas('programKerja', function ($prog) use ($user) {
+                                    $prog->where('created_by', $user->id)
+                                        ->orWhere('created_by_role', 'produksi');
+                                });
+                        }
+                    ]);
+                }
             }
         }
 

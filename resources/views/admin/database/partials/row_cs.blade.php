@@ -111,4 +111,43 @@
     <td class="text-center" style="vertical-align: middle;">
         <span class="badge badge-light border" style="font-size: 0.75rem; padding: 6px 12px;">{{ $item->createdBy?->name ?? $item->created_by }}</span>
     </td>
+
+    {{-- 10. Action --}}
+    <td class="text-center" style="vertical-align: middle;">
+        @php
+            $spJson = $item->salesplan->map(function($sp) {
+                return [
+                    'kelas' => $sp->kelas->nama_kelas ?? 'N/A',
+                    'status' => $sp->status,
+                    'nominal' => $sp->nominal
+                ];
+            })->toJson();
+            
+            $kelasJson = $kelas->map(function($k) {
+                return ['id' => $k->id, 'nama' => $k->nama_kelas];
+            })->toJson();
+        @endphp
+        <button type="button" class="btn btn-sm btn-detail-peserta text-white" 
+            style="background:#25799E; border-radius:8px; width:100px;" 
+            data-id="{{ $item->id }}" 
+            data-nama="{{ $item->nama }}" 
+            data-no-wa="{{ $item->no_wa }}" 
+            data-status="{{ $statusKey }}" 
+            data-nominal="{{ $latestSp ? ($latestSp->nominal ?? 0) : 0 }}"
+            data-can-edit="0" {{-- Read-only for Admin CS view --}}
+            data-input-oleh="{{ $item->createdBy->name ?? $item->created_by ?? '-' }}"
+            data-updated-at="{{ $item->updated_at ? $item->updated_at->format('d/m/Y H:i') : '-' }}"
+            data-potensi="{{ $item->potensi }}"
+            data-kelas-id="{{ $item->kelas_id }}"
+            data-kelas='{!! $kelasJson !!}'
+            data-salesplan='{!! $spJson !!}'
+            @for($i=1; $i<=10; $i++)
+                data-fu{{$i}}-hasil="{{ $item->{'fu'.$i.'_hasil'} }}"
+                data-fu{{$i}}-at="{{ $item->{'fu'.$i.'_at'} ? $item->{'fu'.$i.'_at'}->format('d/m/Y H:i') : '' }}"
+                data-fu{{$i}}-tindak-lanjut="{{ $item->{'fu'.$i.'_tindak_lanjut'} }}"
+            @endfor
+        >
+            <i class="fas fa-eye"></i> Prospek
+        </button>
+    </td>
 </tr>

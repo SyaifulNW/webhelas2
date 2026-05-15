@@ -153,6 +153,16 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/monitoring-perbaikan/update/{id}', [\App\Http\Controllers\MonitoringPerbaikanController::class, 'update'])->name('monitoring-perbaikan.update');
     Route::delete('/monitoring-perbaikan/destroy/{id}', [\App\Http\Controllers\MonitoringPerbaikanController::class, 'destroy'])->name('monitoring-perbaikan.destroy');
 
+    // Pengadaan Barang
+    Route::post('/pengadaan-barang/store', [\App\Http\Controllers\PengadaanBarangController::class, 'store'])->name('pengadaan-barang.store');
+    Route::put('/pengadaan-barang/update/{id}', [\App\Http\Controllers\PengadaanBarangController::class, 'update'])->name('pengadaan-barang.update');
+    Route::delete('/pengadaan-barang/destroy/{id}', [\App\Http\Controllers\PengadaanBarangController::class, 'destroy'])->name('pengadaan-barang.destroy');
+
+    // Inventaris Kantor
+    Route::post('/inventaris-kantor/store', [\App\Http\Controllers\InventarisKantorController::class, 'store'])->name('inventaris-kantor.store');
+    Route::put('/inventaris-kantor/update/{id}', [\App\Http\Controllers\InventarisKantorController::class, 'update'])->name('inventaris-kantor.update');
+    Route::delete('/inventaris-kantor/destroy/{id}', [\App\Http\Controllers\InventarisKantorController::class, 'destroy'])->name('inventaris-kantor.destroy');
+
     // Admin Group (Prefix & Name 'admin.')
     Route::prefix('admin')->name('admin.')->group(function () {
 

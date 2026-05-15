@@ -127,21 +127,55 @@
     </td>
 
     {{-- 10. PIC / Action --}}
-    @if(in_array($userRole, ['administrator', 'operasional']))
-        <td class="text-center" style="vertical-align: middle;">
-            <span class="badge badge-light border" style="font-size: 0.75rem; padding: 6px 12px;">{{ $item->createdBy?->name ?? $item->created_by }}</span>
-        </td>
-    @else
-        <td class="text-center" style="vertical-align: middle;">
-            <div class="d-flex flex-column gap-1">
+    <td class="text-center" style="vertical-align: middle;">
+        <div class="d-flex flex-column gap-1 align-items-center">
+            @php
+                $spJson = $item->salesplan->map(function($sp) {
+                    return [
+                        'kelas' => $sp->kelas->nama_kelas ?? 'N/A',
+                        'status' => $sp->status,
+                        'nominal' => $sp->nominal
+                    ];
+                })->toJson();
+                
+                $kelasJson = $kelas->map(function($k) {
+                    return ['id' => $k->id, 'nama' => $k->nama_kelas];
+                })->toJson();
+            @endphp
+            <button type="button" class="btn btn-sm btn-detail-peserta text-white mb-1" 
+                style="background:#25799E; border-radius:8px; width:110px;" 
+                data-id="{{ $item->id }}" 
+                data-nama="{{ $item->nama }}" 
+                data-no-wa="{{ $item->no_wa }}" 
+                data-status="{{ $statusKey }}" 
+                data-nominal="{{ $latestSp ? ($latestSp->nominal ?? 0) : 0 }}"
+                data-can-edit="{{ $canEdit ? '1' : '0' }}"
+                data-input-oleh="{{ $item->createdBy->name ?? $item->created_by ?? '-' }}"
+                data-updated-at="{{ $item->updated_at ? $item->updated_at->format('d/m/Y H:i') : '-' }}"
+                data-potensi="{{ $item->potensi }}"
+                data-kelas-id="{{ $item->kelas_id }}"
+                data-kelas='{!! $kelasJson !!}'
+                data-salesplan='{!! $spJson !!}'
+                @for($i=1; $i<=10; $i++)
+                    data-fu{{$i}}-hasil="{{ $item->{'fu'.$i.'_hasil'} }}"
+                    data-fu{{$i}}-at="{{ $item->{'fu'.$i.'_at'} ? $item->{'fu'.$i.'_at'}->format('d/m/Y H:i') : '' }}"
+                    data-fu{{$i}}-tindak-lanjut="{{ $item->{'fu'.$i.'_tindak_lanjut'} }}"
+                @endfor
+            >
+                <i class="fas fa-eye"></i> Prospek
+            </button>
+
+            @if(in_array($userRole, ['administrator', 'operasional']))
+                <span class="badge badge-light border" style="font-size: 0.75rem; padding: 6px 12px; width: 110px;">{{ $item->createdBy?->name ?? $item->created_by }}</span>
+            @else
                 @if(!$item->is_no_potensi)
-                    <button type="button" class="btn btn-sm btn-warning" onclick="markNoPotensi('{{ $item->id }}')" style="font-size: 0.7rem;">X Tidak Potensi</button>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="markNoPotensi('{{ $item->id }}')" style="font-size: 0.7rem; width: 110px;">X Tidak Potensi</button>
                 @endif
                 <form action="{{ route('admin.database.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus?')">
                     @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-danger w-100" style="font-size: 0.7rem;">Hapus</button>
+                    <button type="submit" class="btn btn-sm btn-danger" style="font-size: 0.7rem; width: 110px;">Hapus</button>
                 </form>
-            </div>
-        </td>
-    @endif
+            @endif
+        </div>
+    </td>
 </tr>
