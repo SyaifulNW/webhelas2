@@ -3,7 +3,7 @@
 @php 
     $userRole = strtolower(auth()->user()->role); 
     $viewType = request('view_type');
-    $isChapterView = ($userRole === 'chapter' || $userRole === 'reseller' || ($userRole === 'administrator' && $viewType === 'chapter'));
+    $isChapterView = ($userRole === 'chapter' || $userRole === 'reseller' || (in_array($userRole, ['administrator', 'operasional']) && $viewType === 'chapter'));
     $isAdminCSView = ($userRole === 'administrator' && $viewType !== 'chapter');
     $isCSMBCView = ($userRole === 'cs-mbc');
 @endphp
@@ -268,7 +268,7 @@
         $userRole = strtolower($user->role);
     @endphp
 
-    @if($userRole !== 'administrator')
+    @if(!in_array($userRole, ['administrator', 'operasional']))
         <div class="d-sm-flex align-items-center justify-content-between mb-4">
             <h1 class="h3 mb-0 text-gray-800">
                 @if($userRole === 'chapter')
@@ -517,9 +517,15 @@
                             </li>
                         </ul>
                     </div>
+                @elseif($userRole === 'operasional')
+                    <div class="mb-4">
+                        <span class="badge bg-primary text-white rounded-pill px-4 py-2 fw-bold shadow-sm" style="font-size: 0.9rem; background: linear-gradient(135deg, #25799E 0%, #1d617e 100%) !important;">
+                            <i class="fas fa-university me-2"></i> DATABASE CHAPTER
+                        </span>
+                    </div>
                 @endif
 
-                @if(!in_array($userRole, ['chapter', 'reseller']))
+                @if(!in_array($userRole, ['chapter', 'reseller', 'operasional']))
                     <div class="stat-card-group mb-4">
                         <!-- Database Baru -->
                         <div class="g-stat-card g-sc-cyan">
@@ -564,7 +570,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-nowrap gap-2 overflow-x-auto pb-2">
                     <!-- Kiri: Tombol Tambah -->
                     <div class="d-flex align-items-center">
-                        @if(!in_array($userRole, ['administrator', 'manager', 'marketing']) && !(auth()->user()->name === 'Linda' && request('view') !== 'me'))
+                        @if(!in_array($userRole, ['administrator', 'manager', 'marketing', 'operasional']) && !(auth()->user()->name === 'Linda' && request('view') !== 'me'))
                             @php
                                $slugName = ($userRole === 'chapter' && !empty(auth()->user()->chapter))
                                            ? 'chapter-' . strtolower(str_replace(' ', '-', auth()->user()->chapter)) 
@@ -665,8 +671,8 @@
                                     use App\Models\User;
                                     $user = auth()->user();
                                     $csList = collect();
-                                    if (in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo' || $user->name === 'Linda') {
-                                        $csList = User::where('role', 'cs-mbc')->where('is_active', 1)->select('id', 'name')->orderBy('name')->get();
+                                    if (in_array(strtolower($user->role), ['administrator', 'manager', 'marketing', 'operasional']) || $user->name === 'Agus Setyo' || $user->name === 'Linda') {
+                                        $csList = User::whereIn('role', ['cs-mbc', 'cs-smi', 'customer_service'])->where('is_active', 1)->select('id', 'name')->orderBy('name')->get();
                                         $chapterList = User::where('role', 'chapter')->select('id', 'name', 'chapter')->orderBy('name')->get();
                                     }
                                 @endphp
@@ -697,29 +703,33 @@
                                 @endif
 
                                 {{-- Potensi --}}
-                                <div class="flex-column" style="gap: 2px; display: flex;">
-                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Potensi Kelas Selanjutnya</label>
-                                    <select id="filterPotensi" class="form-select form-select-sm modern-select" onchange="toggleFilterKelas(this.value)">
-                                        <option value="">ALL Potensi</option>
-                                        <option value="MBC" {{ request('potensi') == 'MBC' ? 'selected' : '' }}>MBC</option>
-                                        <option value="SMI" {{ request('potensi') == 'SMI' ? 'selected' : '' }}>M1T (SMI)</option>
-                                    </select>
-                                </div>
+                                @if($userRole !== 'operasional')
+                                    <div class="flex-column" style="gap: 2px; display: flex;">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Potensi Kelas Selanjutnya</label>
+                                        <select id="filterPotensi" class="form-select form-select-sm modern-select" onchange="toggleFilterKelas(this.value)">
+                                            <option value="">ALL Potensi</option>
+                                            <option value="MBC" {{ request('potensi') == 'MBC' ? 'selected' : '' }}>MBC</option>
+                                            <option value="SMI" {{ request('potensi') == 'SMI' ? 'selected' : '' }}>M1T (SMI)</option>
+                                        </select>
+                                    </div>
+                                @endif
 
                                 {{-- Filter Nama Kelas (Dinamis jika MBC) --}}
-                                <div id="containerFilterKelas" class="flex-column {{ request('potensi') == 'MBC' ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
-                                    <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Kelas MBC</label>
-                                    <select id="filterKelasId" class="form-select form-select-sm modern-select">
-                                        <option value="">Pilih Kelas</option>
-                                        @php $today = \Carbon\Carbon::today(); @endphp
-                                        @foreach($kelas as $k)
-                                            @php $tglSelesai = $k->tanggal_selesai ? \Carbon\Carbon::parse($k->tanggal_selesai) : null; @endphp
-                                            @if(!str_contains($k->nama_kelas, 'Muslim Indonesia') && ($tglSelesai && $tglSelesai->gte($today)))
-                                                <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                </div>
+                                @if($userRole !== 'operasional')
+                                    <div id="containerFilterKelas" class="flex-column {{ request('potensi') == 'MBC' ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
+                                        <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Kelas MBC</label>
+                                        <select id="filterKelasId" class="form-select form-select-sm modern-select">
+                                            <option value="">Pilih Kelas</option>
+                                            @php $today = \Carbon\Carbon::today(); @endphp
+                                            @foreach($kelas as $k)
+                                                @php $tglSelesai = $k->tanggal_selesai ? \Carbon\Carbon::parse($k->tanggal_selesai) : null; @endphp
+                                                @if(!str_contains($k->nama_kelas, 'Muslim Indonesia') && ($tglSelesai && $tglSelesai->gte($today)))
+                                                    <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                                @endif
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
 
                                 {{-- Follow Up --}}
                                 <div class="flex-column" style="gap: 2px; display: flex;">
@@ -735,7 +745,7 @@
                                 </div>
 
                                 {{-- CS / Chapter Filter --}}
-                                @if(in_array(strtolower($user->role), ['administrator', 'manager', 'marketing']) || $user->name === 'Agus Setyo')
+                                @if(in_array(strtolower($user->role), ['administrator', 'manager', 'marketing', 'operasional']) || $user->name === 'Agus Setyo')
                                     <div class="flex-column" style="gap: 2px; display: {{ request('view_type') === 'chapter' ? 'flex' : 'none' }};" id="filterChapterContainer">
                                         <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Chapter</label>
                                         <select id="filterChapter" class="form-select form-select-sm modern-select">
@@ -896,8 +906,8 @@
                         provinsi: document.getElementById('filterProvinsi').value,
                         kota: document.getElementById('filterKota').value,
                         status: document.getElementById('filterStatus').value,
-                        potensi: document.getElementById('filterPotensi').value,
-                        kelas_id: document.getElementById('filterKelasId').value
+                        potensi: document.getElementById('filterPotensi') ? document.getElementById('filterPotensi').value : '',
+                        kelas_id: document.getElementById('filterKelasId') ? document.getElementById('filterKelasId').value : ''
                     };
 
                     // Add optional filters if they exist in DOM
@@ -1049,7 +1059,7 @@
                                     <th style="width: 120px; text-align:center;">Rekap Penilaian</th>
                                     <th style="width: 110px; text-align:center;">Prospek</th>
                                     <th style="width: 160px; text-align:center;">Status Potensi</th>
-                                    @if($userRole === 'administrator')
+                                    @if(in_array($userRole, ['administrator', 'operasional']))
                                         <th style="width: 120px; text-align:center;">PIC</th>
                                     @endif
                                 

@@ -9,7 +9,7 @@
     @php
         $userRole = strtolower(auth()->user()->role);
         $isCs = in_array($userRole, ['cs', 'cs-mbc', 'cs-smi', 'customer_service']);
-        $canEdit = $userRole !== 'marketing';
+        $canEdit = !in_array($userRole, ['marketing', 'operasional']);
     @endphp
 
     {{-- Nama + WA + CTA (Merged) --}}
@@ -288,7 +288,7 @@
         </td> --}}
     @endif
 
-    @if(in_array($userRole, ['administrator', 'manager', 'marketing', 'agen']) || auth()->user()->name === 'Agus Setyo' || auth()->user()->name === 'Linda')
+    @if(in_array($userRole, ['administrator', 'manager', 'marketing', 'agen', 'operasional']) || auth()->user()->name === 'Agus Setyo' || auth()->user()->name === 'Linda')
         <td>{{ $item->createdBy->name ?? $item->created_by }}</td>
 
 

@@ -36,14 +36,9 @@ class ProgramKerjaController extends Controller
                 $query->where('created_by_role', 'produksi');
             }
         }
-        // Jika Rafi/Rofi dengan role Operasional -> Hanya milik sendiri
+        // Jika Rafi/Rofi dengan role Operasional -> Hanya milik sendiri (Inputan sendiri)
         else if ($isRafiRofi && $userRole === 'operasional') {
-            $query->where(function ($q) use ($user) {
-                $q->where('created_by', $user->id)
-                    ->orWhereHas('inisiatifs', function ($sub) use ($user) {
-                        $sub->where('pic', $user->name);
-                    });
-            });
+            $query->where('created_by', $user->id);
         }
         // Jika Yasmin atau Linda -> Hanya yang dia buat sendiri
         else if ($isYasminLinda) {

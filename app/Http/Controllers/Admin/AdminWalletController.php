@@ -31,14 +31,14 @@ class AdminWalletController extends Controller
                 $totalEarningsAllTime = \App\Services\EarningsService::calculateTotalEarnings($wallet->user_id);
                 $totalWithdrawnAllTime = $wallet->transactions()
                     ->where('type', 'withdrawal')
-                    ->whereIn('status', ['success', 'pending', 'rejected'])
+                    ->whereIn('status', ['success', 'pending'])
                     ->sum('amount');
                 
                 $wallet->balance = $totalEarningsAllTime - $totalWithdrawnAllTime;
 
                 $wallet->pending_balance = $wallet->transactions()
                     ->where('type', 'withdrawal')
-                    ->whereIn('status', ['pending', 'rejected'])
+                    ->where('status', 'pending')
                     ->sum('amount');
                 
                 $wallet->save();
@@ -71,13 +71,15 @@ class AdminWalletController extends Controller
             $wallet = $transaction->wallet;
             
             if ($request->action === 'approve') {
-                if ($wallet->balance < $transaction->amount) {
+                // [FIX] Since balance is already "Available" (Total - Success - Pending), 
+                // the pending transaction amount is already subtracted.
+                // We check if (Available + This Transaction) >= This Transaction.
+                if (($wallet->balance + $transaction->amount) < $transaction->amount) {
                     return back()->with('error', 'Saldo user tidak mencukupi untuk penarikan ini.');
                 }
                 
-                $wallet->balance -= $transaction->amount;
-                $wallet->save();
-                
+                // [FIX] We do NOT subtract again here because the sync logic in index() 
+                // will handle it once the status changes to 'success'.
                 $transaction->status = 'success';
 
                 // Handle Proof of Transfer Upload

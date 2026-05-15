@@ -13,6 +13,8 @@ class PesertaSmiController extends Controller
      */
     public function index(Request $request)
     {
+        $csList = [];
+        $listCs = [];
         // Auto-sync from SalesPlan for M1T related classes
         $m1tClasses = \App\Models\Kelas::whereIn('nama_kelas', [
             'Start-Up Muslim Indonesia',
@@ -103,55 +105,43 @@ class PesertaSmiController extends Controller
                 ->pluck('id');
             $allTeamIds = $resellerMembersIds->merge([$userId])->unique();
             
-            if (in_array($role, ['reseller', 'agen'])) {
-                // RESELLER/AGEN: Strict Personal + Direct Downline ownership only
-                $query->where(function($q) use ($allTeamIds) {
-                    $q->whereIn('closing_cs_id', $allTeamIds)
-                      ->orWhereIn('created_by', $allTeamIds)
-                      ->orWhereHas('salesPlan', function($sq) use ($allTeamIds) {
-                          $sq->whereIn('created_by', $allTeamIds);
-                      });
-                });
-            } else {
-                // CHAPTER: Maintain Chapter-wide Regional Visibility
-                $cleanChapter = str_replace('CHAPTER ', '', strtoupper($chapterName ?: ''));
+            $query->where(function ($q) use ($chapterName, $userId, $allTeamIds) {
+                // 1. Personal / Team ownership (Always visible)
+                $q->whereIn('closing_cs_id', $allTeamIds)
+                  ->orWhereIn('created_by', $allTeamIds)
+                  ->orWhereHas('salesPlan', function($sq) use ($allTeamIds) {
+                      $sq->whereIn('created_by', $allTeamIds);
+                  });
 
-                $query->where(function ($q) use ($chapterName, $userId, $cleanChapter) {
-                    // Daftar CS-MBC yang harus disembunyikan dari Chapter
+                // 2. Chapter Visibility (If assigned to a chapter)
+                // [USER_REQUEST] Chapter/Reseller/Agen within the same chapter should see consistent chapter data.
+                if ($chapterName) {
+                    $cleanChapter = str_replace('CHAPTER ', '', strtoupper($chapterName));
                     $excludeNames = ['Yasmin', 'Linda', 'Puput', 'Arifa', 'Diah Putri', 'Shafa', 'Muthia', 'Latifah', 'Gunawan'];
 
-                    if ($chapterName) {
-                        $q->where(function ($sq) use ($chapterName, $cleanChapter, $excludeNames) {
-                            // 1. Match by Participant's City (MUST NOT be from CS-MBC)
-                            $sq->whereHas('salesPlan.data', function ($tsq) use ($chapterName, $cleanChapter, $excludeNames) {
-                                $tsq->where(function ($ssq) use ($chapterName, $cleanChapter) {
-                                    $ssq->where('kota_nama', 'LIKE', '%' . $chapterName . '%')
-                                        ->orWhere('kota_nama', 'LIKE', '%' . $cleanChapter . '%');
-                                })
-                                ->whereNotIn('created_by', $excludeNames)
-                                ->where('created_by_role', '!=', 'cs-mbc');
-                            });
-
-                            // 2. Match by Closer's/Creator's Chapter (Regional visibility)
-                            $sq->orWhereHas('closingCs', function ($tsq) use ($chapterName, $cleanChapter, $excludeNames) {
-                                $tsq->where(function ($ssq) use ($chapterName, $cleanChapter) {
-                                    $ssq->where('chapter', 'LIKE', '%' . $chapterName . '%')
-                                        ->orWhere('chapter', 'LIKE', '%' . $cleanChapter . '%');
-                                })
-                                ->whereNotIn('name', $excludeNames)
-                                ->where('role', '!=', 'cs-mbc');
-                            });
+                    $q->orWhere(function ($sq) use ($chapterName, $cleanChapter, $excludeNames) {
+                        // Match by Participant's City (Regional visibility)
+                        $sq->whereHas('salesPlan.data', function ($tsq) use ($chapterName, $cleanChapter, $excludeNames) {
+                            $tsq->where(function ($ssq) use ($chapterName, $cleanChapter) {
+                                $ssq->where('kota_nama', 'LIKE', '%' . $chapterName . '%')
+                                    ->orWhere('kota_nama', 'LIKE', '%' . $cleanChapter . '%');
+                            })
+                            ->whereNotIn('created_by', $excludeNames)
+                            ->where('created_by_role', '!=', 'cs-mbc');
                         });
-                    }
 
-                    // 3. Always show direct ownership (Show self-input data even if name is in exclude list, though unlikely)
-                    $q->orWhere('closing_cs_id', $userId)
-                        ->orWhere('created_by', $userId)
-                        ->orWhereHas('salesPlan', function ($sq) use ($userId) {
-                            $sq->where('created_by', $userId);
+                        // Match by Closer's Chapter (Regional visibility)
+                        $sq->orWhereHas('closingCs', function ($tsq) use ($chapterName, $cleanChapter, $excludeNames) {
+                            $tsq->where(function ($ssq) use ($chapterName, $cleanChapter) {
+                                $ssq->where('chapter', 'LIKE', '%' . $chapterName . '%')
+                                    ->orWhere('chapter', 'LIKE', '%' . $cleanChapter . '%');
+                            })
+                            ->whereNotIn('name', $excludeNames)
+                            ->where('role', '!=', 'cs-mbc');
                         });
-                });
-            }
+                    });
+                }
+            });
         }
 
         // 1. SCOPE FILTERS (Global Dashboard Scope: Month, Year, Entry Period)
@@ -289,6 +279,17 @@ class PesertaSmiController extends Controller
                 // 4. Fallback: Match by cs_name string (for cases where user association is missing but name contains region)
                 $q->orWhere('cs_name', 'LIKE', '%' . $chapter . '%')
                   ->orWhere('cs_name', 'LIKE', '%' . $cleanChapter . '%');
+            });
+        }
+
+        // [USER_REQUEST] Filter CS Pusat (Linda, Shafa, Yasmin)
+        if ($request->has('filter_cs_pusat') && $request->filter_cs_pusat && $request->filter_cs_pusat !== 'all') {
+            $csName = $request->filter_cs_pusat;
+            $query->where(function($q) use ($csName) {
+                $q->where('cs_name', 'LIKE', '%' . $csName . '%')
+                  ->orWhereHas('closingCs', function($sq) use ($csName) {
+                      $sq->where('name', 'LIKE', '%' . $csName . '%');
+                  });
             });
         }
 
@@ -834,8 +835,23 @@ class PesertaSmiController extends Controller
         $statusFilter = request('filter_status'); // Alias for compatibility
 
         // ðŸš€ Add $salesplans, $csList, $kelasList, and $statusFilter to avoid undefined variable errors in view
-        $csList = \App\Models\User::whereIn('role', ['cs-mbc', 'cs-smi', 'administrator'])->orderBy('name')->get();
-        $listCs = $csList; // Alias for compatibility
+        // [USER_REQUEST] Populate PIC filter from actual data in the PIC column
+        $picsFromCsName = \App\Models\PesertaSmi::whereNotNull('cs_name')->where('cs_name', '!=', '')->distinct()->pluck('cs_name')->toArray();
+        $picsFromUsers = \App\Models\User::whereIn('role', ['cs-mbc', 'cs-smi', 'administrator', 'marketing', 'Advertising'])->pluck('name')->toArray();
+        $allPicNames = array_unique(array_merge($picsFromCsName, $picsFromUsers));
+        
+        // [USER_REQUEST] CS Pusat hanya Linda, Yasmin, Shafa Zahra saja
+        $whitelist = ['Linda', 'Yasmin', 'Shafa Zahra', 'Shafa'];
+        $allPicNames = array_filter($allPicNames, function($name) use ($whitelist) {
+            foreach($whitelist as $w) {
+                if (stripos($name, $w) !== false) return true;
+            }
+            return false;
+        });
+        
+        sort($allPicNames);
+        $listCs = $allPicNames; // Passing names instead of objects for simplicity in this specific filter
+        $csList = $listCs; // Alias for compatibility with compact()
 
         $salesplans = \App\Models\SalesPlan::where('status', 'sudah_transfer')
             ->when($bulan !== 'all', function ($q) use ($bulan) {
@@ -847,7 +863,31 @@ class PesertaSmiController extends Controller
             ->with(['kelas', 'data', 'createdBy'])
             ->get();
 
-        return view('admin.peserta-smi.index', compact('data', 'listCs', 'csList', 'kelasList', 'monthsRaw', 'statusFilter', 'pendapatan', 'totalMbc', 'totalSmi', 'totalPrivate', 'mbcBreakdown', 'smiBreakdown', 'kelasBulanIni', 'biaya', 'semuaKelas', 'bulan', 'tahun', 'badgeStats', 'kelasFilter', 'csFilter', 'isCsMbc', 'salesplans', 'stats'));
+        return view('admin.peserta-smi.index', [
+            'data' => $data,
+            'listCs' => $listCs,
+            'csList' => $csList,
+            'kelasList' => $kelasList,
+            'monthsRaw' => $monthsRaw,
+            'statusFilter' => $statusFilter,
+            'pendapatan' => $pendapatan,
+            'totalMbc' => $totalMbc,
+            'totalSmi' => $totalSmi,
+            'totalPrivate' => $totalPrivate,
+            'mbcBreakdown' => $mbcBreakdown,
+            'smiBreakdown' => $smiBreakdown,
+            'kelasBulanIni' => $kelasBulanIni,
+            'biaya' => $biaya,
+            'semuaKelas' => $semuaKelas,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'badgeStats' => $badgeStats,
+            'kelasFilter' => $kelasFilter,
+            'csFilter' => $csFilter,
+            'isCsMbc' => $isCsMbc,
+            'salesplans' => $salesplans,
+            'stats' => $stats
+        ]);
     }
 
 

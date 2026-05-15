@@ -894,8 +894,10 @@ public function operasionalDashboard(Request $request)
     $namaBulan = $carbonBulan->translatedFormat('F');
     $role = 'operasional';
 
+    $monitoringPerbaikan = \App\Models\MonitoringPerbaikan::orderBy('created_at', 'desc')->get();
+
     return view('operasional.dashboard', compact(
-        'role', 'kelasOmsetFiltered', 'totalNilaiHasil', 'historyNilai', 'bulan', 'namaBulan', 'tahun', 'csName'
+        'role', 'kelasOmsetFiltered', 'totalNilaiHasil', 'historyNilai', 'bulan', 'namaBulan', 'tahun', 'csName', 'monitoringPerbaikan'
     ));
 }
 }

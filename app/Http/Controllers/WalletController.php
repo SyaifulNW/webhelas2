@@ -32,7 +32,7 @@ class WalletController extends Controller
         $totalEarningsAllTime = \App\Services\EarningsService::calculateTotalEarnings($user->id);
         $totalWithdrawnAllTime = $wallet->transactions()
             ->where('type', 'withdrawal')
-            ->whereIn('status', ['success', 'pending', 'rejected'])
+            ->whereIn('status', ['success', 'pending'])
             ->sum('amount');
         
         $availableBalance = $totalEarningsAllTime - $totalWithdrawnAllTime;
@@ -49,7 +49,7 @@ class WalletController extends Controller
         // Hitung saldo tertahan (total current pending & rejected)
         $currentPending = $wallet->transactions()
             ->where('type', 'withdrawal')
-            ->whereIn('status', ['pending', 'rejected'])
+            ->where('status', 'pending')
             ->sum('amount');
 
         // Sync the wallet balances in DB for record keeping

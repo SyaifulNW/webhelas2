@@ -43,13 +43,71 @@
                                  <span class="fs-6 fw-bold text-dark">Pendapatan Lainnya</span>
                                  <small class="badge badge-light border text-muted" style="font-size: 0.65rem; width: fit-content;">MANUAL</small>
                              </div>
+                         @elseif($sales['is_chapter_summary_row'] ?? false)
+                             <div class="avatar bg-soft-success text-success fw-bold rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 1rem; background-color: #e8f5e9;">
+                                 <i class="fa-solid fa-map-location-dot"></i>
+                             </div>
+                             <div class="d-flex flex-column">
+                                 <span class="fs-6 fw-bold text-dark">{{ $sales['nama'] }}</span>
+                                 <small class="badge badge-light border text-muted" style="font-size: 0.65rem; width: fit-content;">CHAPTER TOTAL</small>
+                             </div>
                          @else
                              <div class="avatar bg-soft-primary text-primary fw-bold rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 1rem; background-color: #e6f3ff;">
                                  {{ substr($sales['nama'], 0, 1) }}
                              </div>
                                  <span class="fs-6 fw-bold text-dark">{{ $sales['nama'] }}</span>
                          @endif
+                         
+                         @if($isChapter ?? false)
+                             <div class="d-flex gap-1 ms-2 mt-1">
+                                 <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#personal-detail-{{ $index }}" style="font-size: 0.65rem; border-radius: 20px;">
+                                     <i class="fa-solid fa-user me-1"></i> Pribadi
+                                 </button>
+                                 @if(!empty($sales['agents']))
+                                     <button class="btn btn-xs btn-outline-info py-0 px-2 fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#agents-detail-{{ $index }}" style="font-size: 0.65rem; border-radius: 20px;">
+                                         <i class="fa-solid fa-users me-1"></i> Agen ({{ count($sales['agents']) }})
+                                     </button>
+                                 @endif
+                             </div>
+                         @endif
                      </div>
+
+                     @if($isChapter ?? false)
+                         {{-- 1. Collapsible Pribadi --}}
+                         <div class="collapse mt-2" id="personal-detail-{{ $index }}">
+                             <div class="bg-white p-2 rounded border border-primary shadow-sm" style="min-width: 250px;">
+                                 <div class="fw-bold text-primary border-bottom mb-2 pb-1 d-flex justify-content-between align-items-center" style="font-size: 0.7rem; text-transform: uppercase;">
+                                     <span><i class="fa-solid fa-user me-1"></i> Pendapatan Pribadi</span>
+                                     <span class="badge bg-primary text-white">Rp {{ number_format($sales['personal_nominal'] ?? 0, 0, ',', '.') }}</span>
+                                 </div>
+                                 <div class="text-muted italic" style="font-size: 0.65rem;">
+                                     Penjualan langsung oleh Chapter Head.
+                                 </div>
+                             </div>
+                         </div>
+
+                         {{-- 2. Collapsible Agen --}}
+                         @if(!empty($sales['agents']))
+                             <div class="collapse mt-2" id="agents-detail-{{ $index }}">
+                                 <div class="bg-light p-2 rounded border border-info shadow-sm" style="min-width: 250px;">
+                                     <div class="fw-bold text-info border-bottom mb-2 pb-1 d-flex justify-content-between align-items-center" style="font-size: 0.7rem; text-transform: uppercase;">
+                                         <span><i class="fa-solid fa-user-group me-1"></i> Pendapatan Agen ({{ count($sales['agents'] ?? []) }})</span>
+                                         <span class="badge bg-info text-white">Rp {{ number_format($sales['agents_total_nominal'] ?? 0, 0, ',', '.') }}</span>
+                                     </div>
+                                     <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
+                                         <tbody>
+                                             @foreach($sales['agents'] as $agent)
+                                                 <tr class="border-bottom border-white">
+                                                     <td class="py-1 px-0 fw-bold text-dark">{{ $agent['nama'] }}</td>
+                                                     <td class="py-1 px-0 text-end text-info fw-bold">Rp {{ number_format($agent['total_nominal'], 0, ',', '.') }}</td>
+                                                 </tr>
+                                             @endforeach
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                         @endif
+                     @endif
                  </td>
                 <td class="text-end px-3">
                     @if($showBreakdown)
@@ -94,6 +152,14 @@
                             <span class="text-muted small fw-normal">Total:</span>
                             Rp {{ number_format($sales['total_nominal'], 0, ',', '.') }}
                         </div>
+                    @else
+                        <div class="fw-bold text-primary" style="font-size: 1.1rem;">
+                            <span class="text-muted small fw-normal">Total:</span>
+                            Rp {{ number_format($sales['total_nominal'] ?? 0, 0, ',', '.') }}
+                        </div>
+                        @if(!empty($sales['agents'] ?? []))
+                            <small class="text-muted" style="font-size: 0.65rem;">(Termasuk Agen)</small>
+                        @endif
                     @endif
                 </td>
                 @if(!($isChapter ?? false))

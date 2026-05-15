@@ -148,6 +148,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/chat/{id}', [ChatController::class, 'show'])->name('chat.show');
     Route::post('/chat/{id}', [ChatController::class, 'store'])->name('chat.store');
 
+    // Monitoring Perbaikan
+    Route::post('/monitoring-perbaikan/store', [\App\Http\Controllers\MonitoringPerbaikanController::class, 'store'])->name('monitoring-perbaikan.store');
+    Route::put('/monitoring-perbaikan/update/{id}', [\App\Http\Controllers\MonitoringPerbaikanController::class, 'update'])->name('monitoring-perbaikan.update');
+    Route::delete('/monitoring-perbaikan/destroy/{id}', [\App\Http\Controllers\MonitoringPerbaikanController::class, 'destroy'])->name('monitoring-perbaikan.destroy');
+
     // Admin Group (Prefix & Name 'admin.')
     Route::prefix('admin')->name('admin.')->group(function () {
 

@@ -429,7 +429,7 @@
                         @if(strtolower(auth()->user()->role) === 'administrator' || in_array(auth()->user()->name, ['Linda', 'Yasmin']))
                         <div class="d-flex flex-column" style="gap: 2px;">
                             <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CHAPTER</label>
-                            <select form="sppFilterForm" name="filter_chapter" id="smi_filter_chapter" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 110px;">
+                            <select form="sppFilterForm" name="filter_chapter" id="smi_filter_chapter" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 100px;">
                                 <option value="all" {{ request('filter_chapter', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
                                 <option value="Cirebon" {{ request('filter_chapter') == 'Cirebon' ? 'selected' : '' }}>CIREBON </option>
                                 <option value="Kaltim" {{ request('filter_chapter') == 'Kaltim' ? 'selected' : '' }}>KALTIM</option>
@@ -438,6 +438,16 @@
                                 <option value="Tangerang" {{ request('filter_chapter') == 'Tangerang' ? 'selected' : '' }}>TANGERANG</option>
                                 <option value="Makassar" {{ request('filter_chapter') == 'Makassar' ? 'selected' : '' }}>MAKASSAR</option>
                                 <option value="Lampung" {{ request('filter_chapter') == 'Lampung' ? 'selected' : '' }}>LAMPUNG</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CS PUSAT</label>
+                            <select form="sppFilterForm" name="filter_cs_pusat" id="smi_filter_cs_pusat" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 100px;">
+                                <option value="all" {{ request('filter_cs_pusat', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
+                                @foreach($listCs as $csName)
+                                    <option value="{{ $csName }}" {{ request('filter_cs_pusat') == $csName ? 'selected' : '' }}>{{ $csName }}</option>
+                                @endforeach
                             </select>
                         </div>
                         @endif
@@ -552,8 +562,16 @@
                                         @if(in_array(strtolower(auth()->user()->role), ['reseller', 'chapter']))
                                             Agen Closing
                                         @else
-                                            CS Closing
+                                            PIC
                                         @endif
+                                        <div class="mt-1">
+                                            <select form="sppFilterForm" name="filter_cs_pusat" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 text-center mx-auto" style="font-size: 0.6rem; height: 18px; width: 80px; background: rgba(255,255,255,0.2); color: white; border-radius: 4px; padding: 0;">
+                                                <option value="all" class="text-dark">ALL</option>
+                                                @foreach($listCs as $csName)
+                                                    <option value="{{ $csName }}" {{ request('filter_cs_pusat') == $csName ? 'selected' : '' }} class="text-dark">{{ $csName }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </th>
 
                                     <th colspan="12" id="sppMainHeader"
@@ -1039,6 +1057,7 @@
             const params = new URLSearchParams({
                 ajax: 1,
                 filter_chapter: getVal('smi_filter_chapter'),
+                filter_cs_pusat: getVal('smi_filter_cs_pusat'),
                 filter_status: getVal('smi_filter_status'),
                 filter_approval: getVal('smi_filter_approval'),
                 filter_spp_month: getVal('smi_filter_spp_month'),
@@ -1145,6 +1164,7 @@
         function resetSmiFilters() {
             const ids = [
                 'smi_filter_chapter',
+                'smi_filter_cs_pusat',
                 'smi_filter_status',
                 'smi_filter_spp_month',
                 'smi_filter_spp_status',

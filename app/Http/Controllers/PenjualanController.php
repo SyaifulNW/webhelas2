@@ -133,7 +133,7 @@ class PenjualanController extends Controller
         // 🧑‍💼 2. Penjualan Per CS & Target Pencapaian
         // ======================================================
         // Semua CS & Sales (Marketing) & Chapter (Hanya yang Aktif)
-        $staffUsers = User::whereIn('role', ['cs-mbc', 'cs-smi', 'marketing', 'chapter'])
+        $staffUsers = User::whereIn('role', ['cs-mbc', 'cs-smi', 'marketing', 'chapter', 'reseller', 'agen'])
             ->where('is_active', 1)
             ->where('name', '!=', 'Fitra Jaya Saleh')
             ->get();
@@ -214,16 +214,21 @@ class PenjualanController extends Controller
             $uRealisasi = $uTarget > 0 ? round(($userNominal / $uTarget) * 100) : 0;
             $uConv = $totalLeads > 0 ? round(($userCount / $totalLeads) * 100) : 0;
 
-            // [USER_REQUEST] Always show active cs-mbc and chapter even if 0 omset
-            $isTargetUser = (in_array($user->role, ['cs-mbc', 'chapter']) && $user->is_active);
+            // [USER_REQUEST] Always show active cs-mbc, chapter and reseller/agen even if 0 omset
+            $isTargetUser = (in_array($user->role, ['cs-mbc', 'chapter', 'reseller', 'agen']) && $user->is_active);
 
             // [USER_REQUEST] Categorize into Pusat or Chapter
             if ($userNominal > 0 || $userCount > 0 || $isTargetUser) {
                 $rowData = [
+                    'id' => $user->id,
+                    'created_by_id' => $user->created_by, // Link to parent (Chapter)
+                    'chapter_name' => $user->chapter,    // [USER_REQUEST] Group by region name too
                     'nama' => $user->name,
                     'role' => $user->role,
                     'penjualan' => $userCount,
                     'total_nominal' => $userNominal,
+                    'personal_nominal' => $userNominal, // [USER_REQUEST] Keep personal separate
+                    'agents_total_nominal' => 0,        // [USER_REQUEST] Initialize agents total
                     'mbc_nominal' => $mbcNominal,
                     'mbc_breakdown' => $mbcBreakdown,
                     'm1t_nominal' => $m1tNominal,
@@ -236,13 +241,73 @@ class PenjualanController extends Controller
                     'm1t_aktif_count' => $m1tAktifCounts[$user->id] ?? 0
                 ];
 
-                if ($user->role === 'chapter') {
-                    $salesDataChapter[] = $rowData;
-                } else {
-                    $salesDataPusat[] = $rowData;
-                }
+                $allProcessedData[$user->id] = $rowData;
             }
         }
+
+        // [USER_REQUEST] Group agents under chapters
+        $salesDataPusat = [];
+        $salesDataChapter = [];
+        $allProcessedData = $allProcessedData ?? [];
+
+        // First pass: Identify chapters and initialize their agent lists
+        foreach ($allProcessedData as $id => $data) {
+            if ($data['role'] === 'chapter') {
+                $data['agents'] = [];
+                $salesDataChapter[$id] = $data;
+            }
+        }
+
+        // Second pass: Assign agents to chapters or Pusat
+        foreach ($allProcessedData as $id => $data) {
+            if ($data['role'] === 'chapter') continue; // Already added
+
+            if (in_array($data['role'], ['reseller', 'agen'])) {
+                $parentId = $data['created_by_id'];
+                $chapterName = $data['chapter_name'];
+                $matchedParentId = null;
+
+                // 1. Try match by parent ID
+                if (isset($salesDataChapter[$parentId])) {
+                    $matchedParentId = $parentId;
+                } 
+                // 2. Fallback: match by chapter name
+                elseif (!empty($chapterName)) {
+                    foreach ($salesDataChapter as $chId => $chData) {
+                        if (trim(strtolower($chData['chapter_name'])) === trim(strtolower($chapterName))) {
+                            $matchedParentId = $chId;
+                            break;
+                        }
+                    }
+                }
+
+                if ($matchedParentId) {
+                    $salesDataChapter[$matchedParentId]['agents'][] = $data;
+                    // [USER_REQUEST] Separate chapter head and agents
+                    $salesDataChapter[$matchedParentId]['agents_total_nominal'] += $data['total_nominal'];
+                    $salesDataChapter[$matchedParentId]['mbc_nominal'] += $data['mbc_nominal'];
+                    $salesDataChapter[$matchedParentId]['m1t_nominal'] += $data['m1t_nominal'];
+                    $salesDataChapter[$matchedParentId]['m1t_aktif_count'] += $data['m1t_aktif_count'];
+                } else {
+                    // Independent agent? Put in Pusat
+                    $salesDataPusat[] = $data;
+                }
+            } else {
+                $salesDataPusat[] = $data;
+            }
+        }
+
+        // Convert Chapter back to indexed array for sorting
+        $salesDataChapter = array_values($salesDataChapter);
+        
+        // Recalculate chapter realization percentage after summing agents
+        foreach ($salesDataChapter as &$ch) {
+             $ch['grand_total_nominal'] = $ch['personal_nominal'] + $ch['agents_total_nominal'];
+             $ch['realisasi'] = $ch['target'] > 0 ? round(($ch['grand_total_nominal'] / $ch['target']) * 100) : 0;
+             // Update total_nominal to grand_total for unified sorting/display if needed
+             $ch['total_nominal'] = $ch['grand_total_nominal'];
+        }
+        unset($ch);
 
         // Sorting Logic
         $sortFn = function($a, $b) use ($sort) {
@@ -299,6 +364,26 @@ class PenjualanController extends Controller
                 'komisi' => 0,
                 'bonus' => 0
             ];
+        }
+
+        // [USER_REQUEST] Add Total Chapter Income as a summary row in the Pusat table
+        $totalChapterAchievement = array_sum(array_column($salesDataChapter, 'total_nominal'));
+        $salesDataPusat[] = [
+            'nama' => 'Pendapatan Chapter',
+            'is_chapter_summary_row' => true,
+            'role' => 'system',
+            'penjualan' => null,
+            'total_nominal' => $totalChapterAchievement,
+            'target' => array_sum(array_column($salesDataChapter, 'target')),
+            'realisasi' => 0, // Calculated below
+            'conversion_rate' => 0,
+            'komisi' => 0,
+            'bonus' => 0
+        ];
+        // Calculate realization for the summary row
+        $lastIdx = count($salesDataPusat) - 1;
+        if ($salesDataPusat[$lastIdx]['target'] > 0) {
+            $salesDataPusat[$lastIdx]['realisasi'] = round(($salesDataPusat[$lastIdx]['total_nominal'] / $salesDataPusat[$lastIdx]['target']) * 100);
         }
 
         // ======================================================
@@ -380,7 +465,7 @@ class PenjualanController extends Controller
                     return (float) str_replace('.', '', $plan->nominal ?: 0);
                 }) + (($type === 'all' || $type === 'm1t') ? $sppNominal : 0) + $lainnyaMonth;
 
-            $chapterSum = $salesForMonth->filter(fn($s) => optional($s->createdBy)->role === 'chapter')
+            $chapterSum = $salesForMonth->filter(fn($s) => in_array(optional($s->createdBy)->role, ['chapter', 'reseller', 'agen']))
                 ->sum(function($plan) {
                     if ($plan->pesertaSmi) return (float) str_replace('.', '', $plan->pesertaSmi->total_pembayaran ?: ($plan->pesertaSmi->pembayaran_spp ?: $plan->pesertaSmi->spp_awal ?: 0));
                     return (float) str_replace('.', '', $plan->nominal ?: 0);

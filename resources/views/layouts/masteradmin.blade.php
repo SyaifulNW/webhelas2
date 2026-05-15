@@ -811,17 +811,10 @@
                             </a>
                         </li>
                         
-                        <li class="nav-item {{ (request()->routeIs('admin.database.database') && request('view_type') == 'chapter') ? 'active' : '' }}">
+                        <li class="nav-item {{ request()->routeIs('admin.database.database') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('admin.database.database', ['view_type' => 'chapter']) }}">
-                                <i class="fas fa-fw fa-university"></i>
-                                <span><strong>DATABASE CHAPTER</strong></span>
-                            </a>
-                        </li>
-
-                        <li class="nav-item {{ (request()->routeIs('admin.database.database') && request('view_type') == 'chapter') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('admin.database.database', ['view_type' => 'chapter']) }}">
-                                <i class="fas fa-fw fa-users-cog"></i>
-                                <span><strong>DATABASE AGEN</strong></span>
+                                <i class="fas fa-fw fa-database"></i>
+                                <span><strong>DATABASE</strong></span>
                             </a>
                         </li>
 
@@ -860,12 +853,7 @@
                             </a>
                         </li>
 
-                        <li class="nav-item {{ request()->routeIs('admin.operasional') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('admin.operasional') }}">
-                                <i class="fas fa-fw fa-boxes"></i>
-                                <span><strong>STOK & PERBAIKAN</strong></span>
-                            </a>
-                        </li>
+
                     @endif
 
                     {{-- Sidebar ini hanya tampil jika BUKAN administrator, marketing, manager, hrd, advertising --}}

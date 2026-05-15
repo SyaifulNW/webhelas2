@@ -17,7 +17,7 @@
     if (preg_match('/Kategori: ?(\w+)/i', $item->situasi_bisnis ?? '', $matches)) { $rawKategori = strtoupper($matches[1]); }
 
     $userRole = strtolower(auth()->user()->role);
-    $canEdit  = !in_array($userRole, ['marketing', 'administrator']);
+    $canEdit  = !in_array($userRole, ['marketing', 'administrator', 'operasional']);
 @endphp
 
 <tr data-id="{{ $item->id }}" style="background-color: {{ $currentConfig['rowBg'] }}; color: {{ $currentConfig['text'] }}; transition: background-color 0.3s ease;">
@@ -67,7 +67,7 @@
     {{-- 4. Prov/Kota --}}
     <td>
         <div class="d-flex flex-column gap-1" style="min-width: 120px;">
-            @if($userRole === 'administrator')
+            @if(in_array($userRole, ['administrator', 'operasional']))
                 <div class="p-1 px-2 shadow-sm border rounded bg-white text-muted" style="font-size: 0.75rem; border-color: #dee2e6 !important;">
                     {{ $item->provinsi_nama ?: '-' }}
                 </div>
@@ -127,7 +127,7 @@
     </td>
 
     {{-- 10. PIC / Action --}}
-    @if($userRole === 'administrator')
+    @if(in_array($userRole, ['administrator', 'operasional']))
         <td class="text-center" style="vertical-align: middle;">
             <span class="badge badge-light border" style="font-size: 0.75rem; padding: 6px 12px;">{{ $item->createdBy?->name ?? $item->created_by }}</span>
         </td>

@@ -77,7 +77,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         } elseif ($userRole === 'manager') {
             // Manager hanya boleh lihat Latifah & Tursia
             $csQuery->whereIn('name', ['Latifah', 'Tursia']);
-        } elseif ($userRole === 'administrator' || $userRole === 'marketing' || $user->name === 'Agus Setyo') {
+        } elseif ($userRole === 'administrator' || $userRole === 'marketing' || $userRole === 'operasional' || $user->name === 'Agus Setyo') {
             // Administrator & Agus Setyo & Linda & Marketing boleh lihat daftar CS
             if ($userRole === 'marketing') {
                 $csQuery->where('role', 'cs-mbc');
@@ -122,6 +122,10 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $viewType = $request->input('view_type');
         if (empty($viewType) && $userRole === 'administrator') {
             $viewType = 'cs';
+        }
+        if ($userRole === 'operasional') {
+            $request->merge(['view_type' => 'chapter']);
+            $viewType = 'chapter';
         }
         if ($viewType === 'cs') {
             $query->where('created_by_role', 'cs-mbc');
@@ -340,7 +344,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                 $query->whereIn('leads', ['Marketing', 'Ads', 'Sosmed', 'Zoom', 'Open House']);
             }
             $query->where('created_by_role', 'cs-mbc');
-        } elseif (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen']) && $user->name !== 'Agus Setyo') {
+        } elseif (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen', 'operasional']) && $user->name !== 'Agus Setyo') {
             $query->where('created_by', $user->name);
         }
 
@@ -393,7 +397,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         }
         // Strict CS View
         // Strict CS View
-        if (($user->name === 'Linda' && $forceMyData) || (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen']) && $user->name !== 'Agus Setyo' && $user->name !== 'Linda')) {
+        if (($user->name === 'Linda' && $forceMyData) || (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen', 'operasional']) && $user->name !== 'Agus Setyo' && $user->name !== 'Linda')) {
             $kpiQuery->where('created_by', $user->name);
         }
         
@@ -441,7 +445,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             ->whereMonth('created_at', $statsMonth)
             ->count();
 
-        $target = ($userRole === 'administrator') ? 250 : 50;
+        $target = in_array($userRole, ['administrator', 'operasional']) ? 250 : 50;
         $kurang = max($target - $databaseBaru, 0);
 
         $data = $query->paginate($perPage)->withQueryString();
