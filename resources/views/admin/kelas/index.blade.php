@@ -1,68 +1,149 @@
 @extends('layouts.masteradmin')
 
 @section('content')
-<div class="container-fluid px-4">
-    <h1 class="mb-4"><i class="fa-solid fa-list-check me-2"></i> Manajemen Kelas</h1>
-
-    {{-- ✅ Alert sukses --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {{-- Header & Filter Section --}}
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h1 class="h3 fw-bold text-dark mb-1">
+                <i class="fa-solid fa-calendar-days text-primary me-2"></i> Manajemen Kelas
+            </h1>
+            <p class="text-muted small mb-0">Kelola jadwal dan agenda kelas pelatihan Anda.</p>
         </div>
-    @endif
-
-    {{-- ✅ Tombol tambah --}}
-    <div class="mb-3 text-end">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTambahKelas">
-            <i class="fa-solid fa-plus"></i> Tambah Kelas
-        </button>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalTambahKelas">
+                <i class="fa-solid fa-plus me-2"></i> Tambah Kelas
+            </button>
+        </div>
     </div>
 
-    {{-- ✅ Tabel kelas --}}
-    <div class="card shadow-sm border-0">
-        <div class="card-body table-responsive">
-            <table class="table table-bordered align-middle text-center">
-                <thead class="table-primary">
-                    <tr>
-                        <th>No</th>
-                        <th>Nama Kelas</th>
-                        <th>Tanggal Mulai</th>
-                        <th>Tanggal Selesai</th>
-                        <th>Deskripsi</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($kelas as $index => $k)
+    {{-- Filter Card --}}
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+        <div class="card-body p-3">
+            <form action="{{ route('admin.kelas.index') }}" method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.5px;">Pilih Bulan</label>
+                    <select name="bulan" class="form-select border-0 bg-light fw-semibold" style="height: 45px; border-radius: 10px;">
+                        <option value="">Semua Bulan</option>
+                        @foreach(range(1, 12) as $m)
+                            <option value="{{ $m }}" {{ request('bulan') == $m ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.5px;">Pilih Tahun</label>
+                    <select name="tahun" class="form-select border-0 bg-light fw-semibold" style="height: 45px; border-radius: 10px;">
+                        <option value="">Semua Tahun</option>
+                        @php
+                            $currentYear = date('Y');
+                            $startYear = $currentYear - 3;
+                            $endYear = $currentYear + 3;
+                        @endphp
+                        @for($y = $startYear; $y <= $endYear; $y++)
+                            <option value="{{ $y }}" {{ (request('tahun') == $y || (!request()->has('tahun') && $y == $currentYear)) ? 'selected' : '' }}>
+                                {{ $y }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark fw-bold px-4 shadow-sm w-100" style="height: 45px; border-radius: 10px;">
+                        <i class="fa-solid fa-filter me-2"></i> TERAPKAN FILTER
+                    </button>
+                    <a href="{{ route('admin.kelas.index') }}" class="btn btn-outline-secondary fw-bold px-3 shadow-sm" style="height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-rotate"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Main Table Card --}}
+    <div class="card border-0 shadow-sm" style="border-radius: 15px; overflow: hidden;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="bg-primary text-white">
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td class="fw-semibold">{{ $k->nama_kelas }}</td>
-                            <td>{{ \Carbon\Carbon::parse($k->tanggal_mulai)->format('d M Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($k->tanggal_selesai)->format('d M Y') }}</td>
-                            <td class="text-start">{{ $k->deskripsi ?? '-' }}</td>
-                            <td>
-                                <button 
-                                    class="btn btn-warning btn-sm btn-edit"
-                                    data-id="{{ $k->id }}"
-                                    data-nama="{{ $k->nama_kelas }}"
-                                    data-mulai="{{ $k->tanggal_mulai }}"
-                                    data-selesai="{{ $k->tanggal_selesai }}"
-                                    data-deskripsi="{{ $k->deskripsi }}"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalEditKelas"
-                                >
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                                </button>
-                            </td>
+                            <th class="py-3 ps-4 text-uppercase small fw-bold text-center" style="letter-spacing: 1px; width: 70px;">No</th>
+                            <th class="py-3 text-uppercase small fw-bold" style="letter-spacing: 1px;">Info Kelas</th>
+                            <th class="py-3 text-uppercase small fw-bold text-center" style="letter-spacing: 1px;">Periode</th>
+                            <th class="py-3 text-uppercase small fw-bold text-center" style="letter-spacing: 1px;">Status</th>
+                            <th class="py-3 text-uppercase small fw-bold text-end pe-4" style="letter-spacing: 1px;">Aksi</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-muted fst-italic">Belum ada data kelas</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody class="bg-white">
+                        @forelse($kelas as $index => $k)
+                            @php
+                                $today = \Carbon\Carbon::today();
+                                $mulai = \Carbon\Carbon::parse($k->tanggal_mulai);
+                                $selesai = \Carbon\Carbon::parse($k->tanggal_selesai);
+                                
+                                if($today->lt($mulai)) {
+                                    $statusLabel = 'Upcoming';
+                                    $statusClass = 'bg-info text-dark';
+                                } elseif($today->gt($selesai)) {
+                                    $statusLabel = 'Completed';
+                                    $statusClass = 'bg-secondary text-white';
+                                } else {
+                                    $statusLabel = 'Ongoing';
+                                    $statusClass = 'bg-success text-white';
+                                }
+                            @endphp
+                            <tr>
+                                <td class="ps-4 fw-bold text-muted">{{ $index + 1 }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark mb-0" style="font-size: 1.05rem;">{{ $k->nama_kelas }}</div>
+                                    <div class="text-muted small" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        {{ $k->deskripsi ?? 'Tidak ada deskripsi' }}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <span class="badge bg-light text-dark border fw-normal mb-1">
+                                            <i class="fa-regular fa-calendar-check text-primary me-1"></i>
+                                            {{ $mulai->format('d M Y') }}
+                                        </span>
+                                        <i class="fa-solid fa-arrow-down-long text-muted small opacity-50 my-1"></i>
+                                        <span class="badge bg-light text-dark border fw-normal">
+                                            <i class="fa-regular fa-calendar-xmark text-danger me-1"></i>
+                                            {{ $selesai->format('d M Y') }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $statusClass }} px-3 py-2 rounded-pill" style="font-size: 0.75rem; min-width: 90px;">
+                                        {{ $statusLabel }}
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button 
+                                        class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold btn-edit"
+                                        data-id="{{ $k->id }}"
+                                        data-nama="{{ $k->nama_kelas }}"
+                                        data-mulai="{{ $k->tanggal_mulai }}"
+                                        data-selesai="{{ $k->tanggal_selesai }}"
+                                        data-deskripsi="{{ $k->deskripsi }}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEditKelas"
+                                    >
+                                        <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-5 text-center">
+                                    <div class="text-muted mb-2"><i class="fa-solid fa-folder-open fa-3x opacity-20"></i></div>
+                                    <div class="fw-bold">Belum ada data kelas</div>
+                                    <div class="small text-muted">Silakan tambah kelas baru atau sesuaikan filter Anda.</div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

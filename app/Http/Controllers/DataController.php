@@ -136,6 +136,24 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             $query->whereNotIn('created_by_role', ['chapter', 'reseller', 'agen']);
         }
 
+        // CS biasa → hanya datanya sendiri (Moved higher to capture absolute total correctly)
+        $forceMyData = $request->input('view') === 'me';
+        if ($userRole === 'marketing') {
+            if (stripos($user->name, 'Felmi') !== false) {
+                $query->whereIn('leads', ['Event', 'Open House']);
+            } elseif (stripos($user->name, 'Nisa') !== false) {
+                $query->whereIn('leads', ['Online', 'Sosmed']);
+            } else {
+                $query->whereIn('leads', ['Marketing', 'Ads', 'Sosmed', 'Zoom', 'Open House']);
+            }
+            $query->where('created_by_role', 'cs-mbc');
+        } elseif (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen', 'operasional']) && $user->name !== 'Agus Setyo') {
+            $query->where('created_by', $user->name);
+        }
+
+        // [NEW] Capture Absolute Total Database for the current context (CS/Role)
+        $totalAbsoluteDatabase = (clone $query)->count();
+
         // Filter Search
         if (!empty($searchFilter)) {
             $query->where(function($q) use ($searchFilter) {
@@ -323,6 +341,14 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             }
         }
 
+        // Filter Prospek by Class (from the Jumlah Prospek Card)
+        $prospekKelasId = $request->input('prospek_kelas_id');
+        if (!empty($prospekKelasId) && $prospekKelasId !== 'all') {
+            $query->whereHas('salesplan', function($q) use ($prospekKelasId) {
+                $q->where('kelas_id', $prospekKelasId);
+            });
+        }
+
         // Filter Status (Follow-up Status from SalesPlan) - Only for Chapter/Reseller/Agen as requested
         $statusFilter = $request->input('status');
         if (!empty($statusFilter) && in_array($userRole, ['chapter', 'reseller', 'agen'])) {
@@ -332,21 +358,6 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         }
 
 
-        // CS biasa → hanya datanya sendiri
-        $forceMyData = $request->input('view') === 'me';
-        if ($userRole === 'marketing') {
-            // Khusus Felmi melihat "open_house/Event", Nisa melihat "Online/Sosmed"
-            if (stripos($user->name, 'Felmi') !== false) {
-                $query->whereIn('leads', ['Event', 'Open House']);
-            } elseif (stripos($user->name, 'Nisa') !== false) {
-                $query->whereIn('leads', ['Online', 'Sosmed']);
-            } else {
-                $query->whereIn('leads', ['Marketing', 'Ads', 'Sosmed', 'Zoom', 'Open House']);
-            }
-            $query->where('created_by_role', 'cs-mbc');
-        } elseif (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen', 'operasional']) && $user->name !== 'Agus Setyo') {
-            $query->where('created_by', $user->name);
-        }
 
         // Chapter Role -> filter by user's chapter city
         if ($userRole === 'chapter') {
@@ -448,6 +459,47 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $target = in_array($userRole, ['administrator', 'operasional']) ? 250 : 50;
         $kurang = max($target - $databaseBaru, 0);
 
+        // Compute Prospek Counts based on current query
+        $dataIds = (clone $query)->pluck('id');
+        $prospekCounts = \App\Models\SalesPlan::whereNotNull('kelas_id')
+            ->whereIn('data_id', $dataIds)
+            ->select('kelas_id', \DB::raw('count(DISTINCT data_id) as total'))
+            ->groupBy('kelas_id')
+            ->pluck('total', 'kelas_id')
+            ->toArray();
+        $totalProspek = array_sum($prospekCounts);
+
+        // [NEW] Status Counts for Legend (Based on filtered query)
+        $dataFilteredIds = (clone $query)->pluck('id');
+        
+        $statusCountsQuery = \App\Models\SalesPlan::whereIn('data_id', $dataFilteredIds);
+        
+        // If a specific class is selected, only count statuses for that class
+        $activeKelasId = $request->input('daftar_kelas') ?: $request->input('kelas_id');
+        if (!empty($activeKelasId)) {
+            $statusCountsQuery->where('kelas_id', $activeKelasId);
+        }
+
+        $statusCounts = $statusCountsQuery->select('status', \DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+        
+        $countTertarik = $statusCounts['tertarik'] ?? 0;
+        $countMauTransfer = $statusCounts['mau_transfer'] ?? 0;
+        $countSudahTransfer = $statusCounts['sudah_transfer'] ?? 0;
+        $countNo = $statusCounts['no'] ?? 0;
+        $totalFiltered = (clone $query)->count();
+
+        // If no ikut_kelas filter, force legend counts to 0 for UI clarity as requested
+        if (empty($ikutKelasFilter) && $ikutKelasFilter !== '0') {
+            $countTertarik = 0;
+            $countMauTransfer = 0;
+            $countSudahTransfer = 0;
+            $countNo = 0;
+            $totalFiltered = 0;
+        }
+
         $data = $query->paginate($perPage)->withQueryString();
         $kelas = \App\Models\Kelas::select('id', 'nama_kelas', 'tanggal_selesai')->orderBy('nama_kelas')->get();
 
@@ -489,9 +541,16 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                 'pagination' => $paginationHtml,
                 'stats' => [
                     'databaseBaru' => $databaseBaru,
-                    'totalDatabase' => $totalDatabase,
+                    'totalDatabase' => $totalAbsoluteDatabase, // Use absolute total here
+                    'totalFiltered' => $totalFiltered,
+                    'countTertarik' => $countTertarik,
+                    'countMauTransfer' => $countMauTransfer,
+                    'countSudahTransfer' => $countSudahTransfer,
+                    'countNo' => $countNo,
                     'kurang' => $kurang,
                     'bulanLabel' => $bulanLabel,
+                    'prospekCounts' => $prospekCounts,
+                    'totalProspek' => $totalProspek,
                 ]
             ]);
         }
@@ -503,10 +562,17 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             'provinsiList' => $provinsiList,
             'kotaList' => $kotaList,
             'databaseBaru' => $databaseBaru,
-            'totalDatabase' => $totalDatabase,
+            'totalDatabase' => $totalAbsoluteDatabase, // Use absolute total here
+            'totalFiltered' => $totalFiltered,
+            'countTertarik' => $countTertarik,
+            'countMauTransfer' => $countMauTransfer,
+            'countSudahTransfer' => $countSudahTransfer,
+            'countNo' => $countNo,
             'target' => $target,
             'kurang' => $kurang,
             'bulanLabel' => $bulanLabel,
+            'prospekCounts' => $prospekCounts,
+            'totalProspek' => $totalProspek,
         ]);
     }
 

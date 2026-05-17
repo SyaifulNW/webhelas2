@@ -11,13 +11,27 @@ class KelasController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-public function index()
-{
-    // Urutkan berdasarkan nama kelas dari A ke Z
-    $kelas = \App\Models\Kelas::orderByRaw('LOWER(nama_kelas) ASC')->get();
+    public function index(Request $request)
+    {
+        $query = \App\Models\Kelas::query();
 
-    return view('admin.kelas.index', compact('kelas'));
-}
+        // Filter berdasarkan bulan (dari tanggal_mulai)
+        if ($request->filled('bulan')) {
+            $query->whereMonth('tanggal_mulai', $request->bulan);
+        }
+
+        // Filter berdasarkan tahun (dari tanggal_mulai)
+        // Gunakan tahun dari request, jika tidak ada baru gunakan tahun sekarang
+        $tahun = $request->input('tahun', date('Y'));
+        if ($tahun != '') {
+            $query->whereYear('tanggal_mulai', $tahun);
+        }
+
+        // Urutkan berdasarkan tanggal dibuat terbaru (created_at)
+        $kelas = $query->latest('created_at')->get();
+
+        return view('admin.kelas.index', compact('kelas'));
+    }
 
 
     /**

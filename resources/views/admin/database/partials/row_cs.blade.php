@@ -115,17 +115,25 @@
     {{-- 10. Action --}}
     <td class="text-center" style="vertical-align: middle;">
         @php
+            $today = \Carbon\Carbon::now()->startOfDay();
+            $kelasJson = $kelas->filter(function($k) use ($today) {
+                if (!$k->tanggal_selesai) return true;
+                try {
+                    return \Carbon\Carbon::parse($k->tanggal_selesai)->startOfDay()->greaterThanOrEqualTo($today);
+                } catch (\Exception $e) {
+                    return true;
+                }
+            })->map(function($k) {
+                return ['id' => $k->id, 'nama' => $k->nama_kelas];
+            })->values()->toJson(JSON_HEX_APOS | JSON_HEX_QUOT);
+
             $spJson = $item->salesplan->map(function($sp) {
                 return [
                     'kelas' => $sp->kelas->nama_kelas ?? 'N/A',
                     'status' => $sp->status,
                     'nominal' => $sp->nominal
                 ];
-            })->toJson();
-            
-            $kelasJson = $kelas->map(function($k) {
-                return ['id' => $k->id, 'nama' => $k->nama_kelas];
-            })->toJson();
+            })->toJson(JSON_HEX_APOS | JSON_HEX_QUOT);
         @endphp
         <button type="button" class="btn btn-sm btn-detail-peserta text-white" 
             style="background:#25799E; border-radius:8px; width:100px;" 
@@ -141,6 +149,11 @@
             data-kelas-id="{{ $item->kelas_id }}"
             data-kelas='{!! $kelasJson !!}'
             data-salesplan='{!! $spJson !!}'
+            data-bant-budget="{{ $item->bant_budget }}"
+            data-bant-authority="{{ $item->bant_authority }}"
+            data-bant-time="{{ $item->bant_time }}"
+            data-ikut-zoom="{{ $item->ikut_zoom }}"
+            data-keterangan-spin="{{ $item->keterangan_spin }}"
             @for($i=1; $i<=10; $i++)
                 data-fu{{$i}}-hasil="{{ $item->{'fu'.$i.'_hasil'} }}"
                 data-fu{{$i}}-at="{{ $item->{'fu'.$i.'_at'} ? $item->{'fu'.$i.'_at'}->format('d/m/Y H:i') : '' }}"
