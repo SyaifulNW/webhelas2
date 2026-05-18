@@ -150,33 +150,35 @@
                     ];
                 })->toJson(JSON_HEX_APOS | JSON_HEX_QUOT);
             @endphp
-            <button type="button" class="btn btn-sm btn-detail-peserta text-white mb-1" 
-                style="background:#25799E; border-radius:8px; width:110px;" 
-                data-id="{{ $item->id }}" 
-                data-nama="{{ $item->nama }}" 
-                data-no-wa="{{ $item->no_wa }}" 
-                data-status="{{ $statusKey }}" 
-                data-nominal="{{ $latestSp ? ($latestSp->nominal ?? 0) : 0 }}"
-                data-can-edit="{{ $canEdit ? '1' : '0' }}"
-                data-input-oleh="{{ $item->createdBy->name ?? $item->created_by ?? '-' }}"
-                data-updated-at="{{ $item->updated_at ? $item->updated_at->format('d/m/Y H:i') : '-' }}"
-                data-potensi="{{ $item->potensi }}"
-                data-kelas-id="{{ $item->kelas_id }}"
-                data-kelas='{!! $kelasJson !!}'
-                data-salesplan='{!! $spJson !!}'
-                data-bant-budget="{{ $item->bant_budget }}"
-                data-bant-authority="{{ $item->bant_authority }}"
-                data-bant-time="{{ $item->bant_time }}"
-                data-ikut-zoom="{{ $item->ikut_zoom }}"
-                data-keterangan-spin="{{ $item->keterangan_spin }}"
-                @for($i=1; $i<=10; $i++)
-                    data-fu{{$i}}-hasil="{{ $item->{'fu'.$i.'_hasil'} }}"
-                    data-fu{{$i}}-at="{{ $item->{'fu'.$i.'_at'} ? $item->{'fu'.$i.'_at'}->format('d/m/Y H:i') : '' }}"
-                    data-fu{{$i}}-tindak-lanjut="{{ $item->{'fu'.$i.'_tindak_lanjut'} }}"
-                @endfor
-            >
-                <i class="fas fa-eye"></i> Prospek
-            </button>
+            @if($userRole !== 'administrator')
+                <button type="button" class="btn btn-sm btn-detail-peserta text-white mb-1" 
+                    style="background:#25799E; border-radius:8px; width:110px;" 
+                    data-id="{{ $item->id }}" 
+                    data-nama="{{ $item->nama }}" 
+                    data-no-wa="{{ $item->no_wa }}" 
+                    data-status="{{ $statusKey }}" 
+                    data-nominal="{{ $latestSp ? ($latestSp->nominal ?? 0) : 0 }}"
+                    data-can-edit="{{ $canEdit ? '1' : '0' }}"
+                    data-input-oleh="{{ $item->createdBy->name ?? $item->created_by ?? '-' }}"
+                    data-updated-at="{{ $item->updated_at ? $item->updated_at->format('d/m/Y H:i') : '-' }}"
+                    data-potensi="{{ $item->potensi }}"
+                    data-kelas-id="{{ $item->kelas_id }}"
+                    data-kelas='{!! $kelasJson !!}'
+                    data-salesplan='{!! $spJson !!}'
+                    data-bant-budget="{{ $item->bant_budget }}"
+                    data-bant-authority="{{ $item->bant_authority }}"
+                    data-bant-time="{{ $item->bant_time }}"
+                    data-ikut-zoom="{{ $item->ikut_zoom }}"
+                    data-keterangan-spin="{{ $item->keterangan_spin }}"
+                    @for($i=1; $i<=10; $i++)
+                        data-fu{{$i}}-hasil="{{ $item->{'fu'.$i.'_hasil'} }}"
+                        data-fu{{$i}}-at="{{ $item->{'fu'.$i.'_at'} ? $item->{'fu'.$i.'_at'}->format('d/m/Y H:i') : '' }}"
+                        data-fu{{$i}}-tindak-lanjut="{{ $item->{'fu'.$i.'_tindak_lanjut'} }}"
+                    @endfor
+                >
+                    <i class="fas fa-eye"></i> Prospek
+                </button>
+            @endif
 
             @if(in_array($userRole, ['administrator', 'operasional']))
                 <span class="badge badge-light border" style="font-size: 0.75rem; padding: 6px 12px; width: 110px;">{{ $item->createdBy?->name ?? $item->created_by }}</span>

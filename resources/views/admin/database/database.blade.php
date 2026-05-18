@@ -525,7 +525,7 @@
                     </div>
                 @endif
 
-                @if(!in_array($userRole, ['chapter', 'reseller', 'operasional']))
+                @if(!in_array($userRole, ['chapter', 'reseller', 'operasional']) && !($userRole === 'administrator' && $viewType === 'chapter'))
                     @php 
                         $today = \Carbon\Carbon::now()->startOfDay(); 
                         $user = auth()->user();
@@ -535,7 +535,7 @@
                             $chapterList = \App\Models\User::where('role', 'chapter')->select('id', 'name', 'chapter')->orderBy('name')->get();
                         }
                     @endphp
-                    @if($userRole === 'cs-mbc')
+                    @if($userRole === 'cs-mbc' || $isAdminCSView)
                         <div class="mb-5 d-flex flex-column gap-4">
                             <!-- Row 1: Header Stats & Filters -->
                             <div class="d-flex align-items-stretch flex-wrap gap-5">
@@ -544,7 +544,7 @@
                                     <div class="px-4 py-3 text-center" style="background: linear-gradient(135deg, #1d617e 0%, #25799E 100%); border-right: 1px solid rgba(255,255,255,0.1); flex: 1;">
                                         <div class="text-white fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px; opacity: 0.9;">DATABASE BARU</div>
                                         <div class="text-white-50" style="font-size: 0.65rem; margin-top: -2px;">{{ $bulanLabel }}</div>
-                                        <div class="text-white fw-bold mt-2" style="font-size: 1.25rem;"><span id="statDatabaseBaru">{{ $databaseBaru }}</span> <small style="font-size: 0.8rem; opacity: 0.7;">dari 50</small></div>
+                                        <div class="text-white fw-bold mt-2" style="font-size: 1.25rem;"><span id="statDatabaseBaru">{{ $databaseBaru }}</span> <small style="font-size: 0.8rem; opacity: 0.7;">dari {{ $target }}</small></div>
                                     </div>
                                     <div class="px-4 py-3 text-center d-flex flex-column justify-content-center" style="flex: 1;">
                                         <div class="text-dark fw-bold mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">TOTAL DATABASE</div>
@@ -581,6 +581,19 @@
                                             @endforeach
                                         </select>
                                     </div>
+
+                                    {{-- Tim CS Filter specifically for Administrator --}}
+                                    @if($isAdminCSView)
+                                        <div class="flex-column d-flex" style="gap: 4px;" id="filterCSContainer">
+                                            <label class="text-dark fw-bold mb-0 ml-1" style="font-size: 0.75rem; text-transform: uppercase;">Tim CS</label>
+                                            <select id="filterCS" class="form-select form-select-sm modern-select" style="min-width: 150px; height: 38px; color: #000; font-weight: 600;">
+                                                <option value="">ALL Tim CS</option>
+                                                @foreach($csList as $cs)
+                                                    <option value="{{ $cs->name }}" {{ request('cs_name') == $cs->name ? 'selected' : '' }}>{{ $cs->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    @endif
 
                                     {{-- Search Group --}}
                                     <div class="modern-search-group" style="height: 38px;">
@@ -816,7 +829,7 @@
                             }
                         </style>
 
-                        @if($userRole !== 'cs-mbc')
+                        @if($userRole !== 'cs-mbc' && !$isAdminCSView)
                             {{-- Toolbar Atas: Filter (Presisi & Berfungsi) --}}
                             <div class="w-100 mb-3 d-flex align-items-center justify-content-end">
                                 <div class="d-flex align-items-end flex-wrap" style="gap: 10px;">
@@ -854,7 +867,7 @@
                                     @endif
 
                                     {{-- Potensi --}}
-                                    @if(!in_array($userRole, ['operasional', 'cs-mbc']))
+                                    @if(!in_array($userRole, ['operasional', 'cs-mbc']) && request('view_type') !== 'chapter')
                                         <div class="flex-column" style="gap: 2px; display: flex;">
                                             <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Potensi Kelas Selanjutnya</label>
                                             <select id="filterPotensi" class="form-select form-select-sm modern-select" onchange="toggleFilterKelas(this.value)">
@@ -866,7 +879,7 @@
                                     @endif
 
                                     {{-- Filter Nama Kelas (Dinamis jika MBC) --}}
-                                    @if(!in_array($userRole, ['operasional', 'cs-mbc']))
+                                    @if(!in_array($userRole, ['operasional', 'cs-mbc']) && request('view_type') !== 'chapter')
                                         <div id="containerFilterKelas" class="flex-column {{ request('potensi') == 'MBC' ? 'd-flex' : 'd-none' }}" style="gap: 2px;">
                                             <label class="text-xs fw-bold mb-0 ml-2" style="font-size: 0.65rem; color: #555; text-transform: uppercase;">Kelas MBC</label>
                                             <select id="filterKelasId" class="form-select form-select-sm modern-select">
@@ -1297,10 +1310,10 @@
                                 
                                 {{-- Header for Admin in CS Helas Tab --}}
                                 @elseif($isAdminCSView)
-                                    <th style="min-width: 140px; text-align:center;">✅ Kelas yang Sudah Diikuti</th>
-                                    <th style="min-width: 140px; text-align:center;">🔔 Kelas yang Belum Diikuti</th>
-                                    <th style="width: 160px; text-align:center;">Status Potensi</th>
-                                    <th style="width: 120px; text-align:center;">PIC</th>
+                                    <th style="width: 220px;">Situasi Bisnis</th>
+                                    <th style="width: 150px; text-align:center;">Daftar Prospek</th>
+                                    <th style="width: 120px; text-align:center;">CS PIC</th>
+                                    <th style="width: 80px; text-align:center;">Action</th>
 
                                 {{-- Header for CS-MBC role --}}
                                 @elseif($isCSMBCView)
