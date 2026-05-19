@@ -41,13 +41,20 @@ class DailyActiviti extends Model
         $act2 = Activity::where('nama', 'LIKE', '%Edukasi % Membangun Hubungan%')->first();
         if ($act2) {
             $query = Data::where('created_by', $user->name);
-            
             $selects = [];
             for ($i = 1; $i <= 10; $i++) {
                 $selects[] = "SUM(CASE WHEN fu{$i}_wa = 1 AND DATE(fu{$i}_at) = '{$tanggal}' THEN 1 ELSE 0 END)";
             }
-            
-            $count = $query->selectRaw(implode(' + ', $selects) . ' as total')->first()->total ?? 0;
+            $countData = $query->selectRaw(implode(' + ', $selects) . ' as total')->first()->total ?? 0;
+
+            $querySp = SalesPlan::where('created_by', $userId);
+            $selectsSp = [];
+            for ($i = 1; $i <= 10; $i++) {
+                $selectsSp[] = "SUM(CASE WHEN fu{$i}_wa = 1 AND DATE(fu{$i}_at) = '{$tanggal}' THEN 1 ELSE 0 END)";
+            }
+            $countSp = $querySp->selectRaw(implode(' + ', $selectsSp) . ' as total')->first()->total ?? 0;
+
+            $count = $countData + $countSp;
 
             self::updateOrCreate(
                 ['user_id' => $userId, 'activity_id' => $act2->id, 'tanggal' => $tanggal],
@@ -63,13 +70,20 @@ class DailyActiviti extends Model
 
         if ($act3) {
             $query = Data::where('created_by', $user->name);
-            
             $selects = [];
             for ($i = 1; $i <= 10; $i++) {
                 $selects[] = "SUM(CASE WHEN fu{$i}_telp = 1 AND DATE(fu{$i}_at) = '{$tanggal}' THEN 1 ELSE 0 END)";
             }
-            
-            $count = $query->selectRaw(implode(' + ', $selects) . ' as total')->first()->total ?? 0;
+            $countData = $query->selectRaw(implode(' + ', $selects) . ' as total')->first()->total ?? 0;
+
+            $querySp = SalesPlan::where('created_by', $userId);
+            $selectsSp = [];
+            for ($i = 1; $i <= 10; $i++) {
+                $selectsSp[] = "SUM(CASE WHEN fu{$i}_telp = 1 AND DATE(fu{$i}_at) = '{$tanggal}' THEN 1 ELSE 0 END)";
+            }
+            $countSp = $querySp->selectRaw(implode(' + ', $selectsSp) . ' as total')->first()->total ?? 0;
+
+            $count = $countData + $countSp;
 
             self::updateOrCreate(
                 ['user_id' => $userId, 'activity_id' => $act3->id, 'tanggal' => $tanggal],

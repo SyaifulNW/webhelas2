@@ -93,5 +93,10 @@ class Data extends Model
     {
         return $this->belongsTo(User::class, 'created_by', 'name');
     }
+
+    public function zoomSchedules()
+    {
+        return $this->hasMany(ZoomSchedule::class, 'data_id');
+    }
 }
 

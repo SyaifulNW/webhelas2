@@ -490,6 +490,14 @@
                         </li>
                     @endif
 
+                    {{-- Zoom Scheduling Calendar (M1T One-on-One) --}}
+                    <li class="nav-item {{ request()->routeIs('zoom-schedule.calendar') ? 'active' : '' }}">
+                        <a class="nav-link" href="{{ route('zoom-schedule.calendar') }}" title="ONE-ON-ONE ZOOM">
+                            <i class="fas fa-fw fa-video"></i>
+                            <span><strong>ONE-ON-ONE ZOOM</strong></span>
+                        </a>
+                    </li>
+
                     {{-- 3. DATA PESERTA MBC --}}
                     @if(\App\Models\Menu::isActive('sales_plan'))
                         <li class="nav-item {{ request('type') == 'mbc' ? 'active' : '' }}">
@@ -867,6 +875,13 @@
                                         </a>
                                     </li>
                                 @endif
+
+                                <li class="nav-item {{ request()->routeIs('zoom-schedule.calendar') ? 'active' : '' }}">
+                                    <a class="nav-link" href="{{ route('zoom-schedule.calendar') }}">
+                                        <i class="fas fa-fw fa-video"></i>
+                                        <span><strong>ONE-ON-ONE ZOOM</strong></span>
+                                    </a>
+                                </li>
 
                         @if(\App\Models\Menu::isActive('daily_activity') && !in_array($userRole, ['reseller', 'chapter']))
 

@@ -33,6 +33,14 @@
     </style>
 
     <style>
+        .legend-card-interactive {
+            cursor: pointer !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        .legend-card-interactive:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 18px rgba(37, 121, 158, 0.2) !important;
+        }
         .table-scroll-container {
             overflow-x: auto !important;
             width: 100%;
@@ -540,17 +548,23 @@
                             <!-- Row 1: Header Stats & Filters -->
                             <div class="d-flex align-items-stretch flex-wrap gap-5">
                                 {{-- Stats Table --}}
-                                <div class="bg-white shadow-sm border d-flex" style="border-radius: 12px; overflow: hidden; min-width: 250px;">
+                                <div class="bg-white shadow-sm border d-flex" style="border-radius: 12px; overflow: hidden; min-width: 380px;">
                                     <div class="px-4 py-3 text-center" style="background: linear-gradient(135deg, #1d617e 0%, #25799E 100%); border-right: 1px solid rgba(255,255,255,0.1); flex: 1;">
                                         <div class="text-white fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px; opacity: 0.9;">DATABASE BARU</div>
                                         <div class="text-white-50" style="font-size: 0.65rem; margin-top: -2px;">{{ $bulanLabel }}</div>
                                         <div class="text-white fw-bold mt-2" style="font-size: 1.25rem;"><span id="statDatabaseBaru">{{ $databaseBaru }}</span> <small style="font-size: 0.8rem; opacity: 0.7;">dari {{ $target }}</small></div>
                                     </div>
-                                    <div class="px-4 py-3 text-center d-flex flex-column justify-content-center" style="flex: 1;">
-                                        <div class="text-dark fw-bold mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">TOTAL DATABASE</div>
+                                    <div class="px-4 py-3 text-center d-flex flex-column justify-content-center" style="flex: 1; border-right: 1px solid #dee2e6;">
+                                        <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">TOTAL DATABASE</div>
                                         <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #25799E;" id="statTotalDatabase">{{ $totalDatabase }}</div>
                                     </div>
+
+                                    <div class="px-4 py-3 text-center flex-column justify-content-center" style="flex: 1; {{ request('ikut_kelas') === '1' ? 'display: none !important;' : 'display: flex !important;' }}" id="cardJumlahPotensi">
+                                        <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">JUMLAH POTENSI</div>
+                                        <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #E0A800;" id="statJumlahPotensi">{{ $jumlahPotensi ?? 0 }}</div>
+                                    </div>
                                 </div>
+
 
                                 {{-- Filters & Search (Integrated Style) --}}
                                 <div class="d-flex align-items-end flex-wrap gap-3 p-3 bg-white shadow-sm border" style="border-radius: 12px;">
@@ -609,46 +623,72 @@
                             </div>
 
                             <!-- Row 2: Legend (Simplified) -->
-                            <div class="d-flex align-items-center flex-wrap mt-3" style="gap: 28px;">
-                                <div class="d-flex flex-column align-items-center" style="gap: 8px;">
-                                    <div class="d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 155px; justify-content: center; padding: 10px 20px;">
+                            <div class="d-flex align-items-center flex-wrap mt-3" style="gap: 28px;" id="legendRow">
+                                 @php $ikutKelasVal = request('ikut_kelas'); @endphp
+
+                                 {{-- COLD: shown only when filter = Belum Ikut (0) or empty --}}
+                                 <div class="d-flex flex-column align-items-center" style="gap: 8px;"
+                                      id="legendCold"
+                                      {{ $ikutKelasVal === '1' ? 'style="display:none!important;"' : '' }}>
+                                     <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: auto; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('cold')">
+                                         <div style="width: 14px; height: 14px; background: #ffffff; border: 1px solid #aaa; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
+                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">Total Potensi Ikut Kelas</span>
+                                     </div>
+                                     <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountCold">{{ $ikutKelasVal === '1' ? 0 : ($countCold ?? 0) }}</div>
+                                 </div>
+
+                                {{-- TERTARIK: hidden when filter = Sudah Ikut (1) --}}
+                                <div class="d-flex flex-column align-items-center" style="gap: 8px;"
+                                     id="legendTertarik"
+                                     {{ $ikutKelasVal === '1' ? 'style="display:none!important;"' : '' }}>
+                                    <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 155px; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('tertarik')">
                                         <div style="width: 14px; height: 14px; background: #F2F527; border: 1px solid #ccc; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">TERTARIK</span>
                                     </div>
-                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountTertarik">{{ request('ikut_kelas') !== null && request('ikut_kelas') !== '' ? $countTertarik : 0 }}</div>
+                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountTertarik">{{ $ikutKelasVal !== null && $ikutKelasVal !== '' ? $countTertarik : 0 }}</div>
                                 </div>
 
-                                <div class="d-flex flex-column align-items-center" style="gap: 8px;">
-                                    <div class="d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 170px; justify-content: center; padding: 10px 20px;">
+                                {{-- MAU TRANSFER: hidden when filter = Sudah Ikut (1) --}}
+                                <div class="d-flex flex-column align-items-center" style="gap: 8px;"
+                                     id="legendMauTransfer"
+                                     {{ $ikutKelasVal === '1' ? 'style="display:none!important;"' : '' }}>
+                                    <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 170px; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('mau_transfer')">
                                         <div style="width: 14px; height: 14px; background: #3CDE1D; border: 1px solid #ccc; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">MAU TRANSFER</span>
                                     </div>
-                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountMauTransfer">{{ request('ikut_kelas') !== null && request('ikut_kelas') !== '' ? $countMauTransfer : 0 }}</div>
+                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountMauTransfer">{{ $ikutKelasVal !== null && $ikutKelasVal !== '' ? $countMauTransfer : 0 }}</div>
                                 </div>
 
-                                <div class="d-flex flex-column align-items-center" style="gap: 8px;">
-                                    <div class="d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 185px; justify-content: center; padding: 10px 20px;">
+                                {{-- SUDAH TRANSFER: hidden when filter = Belum Ikut (0) --}}
+                                <div class="d-flex flex-column align-items-center" style="gap: 8px;"
+                                     id="legendSudahTransfer"
+                                     {{ $ikutKelasVal === '0' ? 'style="display:none!important;"' : '' }}>
+                                    <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 185px; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('sudah_transfer')">
                                         <div style="width: 14px; height: 14px; background: #1786E6; border: 1px solid #ccc; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">SUDAH TRANSFER</span>
                                     </div>
-                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountSudahTransfer">{{ request('ikut_kelas') !== null && request('ikut_kelas') !== '' ? $countSudahTransfer : 0 }}</div>
+                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountSudahTransfer">{{ $ikutKelasVal !== null && $ikutKelasVal !== '' ? $countSudahTransfer : 0 }}</div>
                                 </div>
 
-                                <div class="d-flex flex-column align-items-center" style="gap: 8px;">
-                                    <div class="d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 120px; justify-content: center; padding: 10px 20px;">
+                                {{-- NO: hidden when filter = Sudah Ikut (1) --}}
+                                <div class="d-flex flex-column align-items-center" style="gap: 8px;"
+                                     id="legendNo"
+                                     {{ $ikutKelasVal === '1' ? 'style="display:none!important;"' : '' }}>
+                                    <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: 120px; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('no')">
                                         <div style="width: 14px; height: 14px; background: #E61717; border: 1px solid #ccc; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">NO</span>
                                     </div>
-                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountNo">{{ request('ikut_kelas') !== null && request('ikut_kelas') !== '' ? $countNo : 0 }}</div>
+                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountNo">{{ $ikutKelasVal !== null && $ikutKelasVal !== '' ? $countNo : 0 }}</div>
                                 </div>
 
-                                {{-- ALL Card (Filtered Total) --}}
-                                <div class="d-flex flex-column align-items-center" style="gap: 8px;">
-                                    <div class="d-flex align-items-center bg-dark shadow-sm" style="border-radius: 50px; min-width: 160px; justify-content: center; padding: 10px 24px;">
-                                        <span class="fw-bold text-white" style="font-size: 0.8rem; letter-spacing: 1.5px;">ALL POTENSI</span>
-                                    </div>
-                                    <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statTotalFiltered">{{ request('ikut_kelas') !== null && request('ikut_kelas') !== '' ? $totalFiltered : 0 }}</div>
-                                </div>
+                                 {{-- TOTAL card: label changes based on filter --}}
+                                 <div class="d-flex flex-column align-items-center" style="gap: 8px;" id="legendTotal">
+                                     <div class="legend-card-interactive d-flex align-items-center bg-dark shadow-sm" style="border-radius: 50px; min-width: 160px; justify-content: center; padding: 10px 24px;" onclick="filterByLegendStatus('all_total')">
+                                         <span class="fw-bold text-white" style="font-size: 0.8rem; letter-spacing: 1.5px;" id="totalLegendLabel">{{ $ikutKelasVal === '1' ? 'TOTAL SUDAH IKUT' : 'TOTAL BELUM IKUT' }}</span>
+                                     </div>
+                                     <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statTotalFiltered">{{ $ikutKelasVal !== null && $ikutKelasVal !== '' ? $totalFiltered : 0 }}</div>
+                                 </div>
+
                             </div>
                         </div>
 
@@ -696,7 +736,7 @@
                                         <select id="filterCardProspek" class="form-control form-control-sm" style="font-size: 0.7rem; color: #000; width: 120px; height: 24px; padding: 2px 5px;" onchange="updateCardProspek()">
                                             <option value="all">Semua Kelas</option>
                                             @foreach($upcomingKelas as $k)
-                                                <option value="{{ $k->id }}" {{ request('prospek_kelas_id') == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                                <option value="{{ $k->id }}" {{ request('prospek_kelas_id') == $k->id ? 'selected' : '' }}>{{ str_contains($k->nama_kelas, 'Muslim Indonesia') ? 'M1T' : $k->nama_kelas }}</option>
                                             @endforeach
                                         </select>
                                     </span>
@@ -957,6 +997,50 @@
             @endphp
 
             <script>
+                function filterByLegendStatus(status) {
+                    var url = new URL(window.location.href);
+                    var currentStatus = url.searchParams.get('status');
+                    
+                    if (currentStatus === status) {
+                        // Toggle off if already selected
+                        updateFilters({ status: '' });
+                    } else {
+                        updateFilters({ status: status });
+                    }
+                }
+
+                function applyLegendHighlight() {
+                    var url = new URL(window.location.href);
+                    var currentStatus = url.searchParams.get('status');
+                    
+                    const cards = {
+                        'cold': document.getElementById('legendCold'),
+                        'tertarik': document.getElementById('legendTertarik'),
+                        'mau_transfer': document.getElementById('legendMauTransfer'),
+                        'sudah_transfer': document.getElementById('legendSudahTransfer'),
+                        'no': document.getElementById('legendNo')
+                    };
+                    
+                    for (const [status, el] of Object.entries(cards)) {
+                        if (el) {
+                            const innerDiv = el.querySelector('.legend-card-interactive');
+                            if (innerDiv) {
+                                if (currentStatus === status) {
+                                    innerDiv.style.setProperty('border', '2.5px solid #25799E', 'important');
+                                    innerDiv.style.setProperty('box-shadow', '0 6px 18px rgba(37, 121, 158, 0.3)', 'important');
+                                    innerDiv.style.setProperty('background-color', '#f4fafe', 'important');
+                                    innerDiv.style.setProperty('transform', 'translateY(-2px)', 'important');
+                                } else {
+                                    innerDiv.style.setProperty('border', '1px solid #dee2e6', 'important');
+                                    innerDiv.style.setProperty('box-shadow', '0 .125rem .25rem rgba(0,0,0,.075)', 'important');
+                                    innerDiv.style.setProperty('background-color', '#ffffff', 'important');
+                                    innerDiv.style.setProperty('transform', 'none', 'important');
+                                }
+                            }
+                        }
+                    }
+                }
+
                 function updateFilter(key, val) {
                     var params = {};
                     params[key] = val;
@@ -1018,14 +1102,37 @@
                             if (data.stats) {
                                 if (document.getElementById('statDatabaseBaru')) document.getElementById('statDatabaseBaru').innerText = data.stats.databaseBaru;
                                 if (document.getElementById('statTotalDatabase')) document.getElementById('statTotalDatabase').innerText = data.stats.totalDatabase;
+                                if (document.getElementById('statJumlahPotensi')) document.getElementById('statJumlahPotensi').innerText = data.stats.jumlahPotensi !== undefined ? data.stats.jumlahPotensi : 0;
+                                var cardJumlahPotensi = document.getElementById('cardJumlahPotensi');
+                                if (cardJumlahPotensi) {
+                                    var urlParams = new URLSearchParams(url.search);
+                                    var ikutKelas = urlParams.get('ikut_kelas');
+                                    if (ikutKelas === '1') {
+                                        cardJumlahPotensi.style.setProperty('display', 'none', 'important');
+                                    } else {
+                                        cardJumlahPotensi.style.setProperty('display', 'flex', 'important');
+                                    }
+                                }
                                 if (document.getElementById('statBulanLabel')) document.getElementById('statBulanLabel').innerText = data.stats.bulanLabel;
                                 
                                 // CS-MBC Specific Stats
                                 if (document.getElementById('statTotalFiltered')) document.getElementById('statTotalFiltered').innerText = data.stats.totalFiltered;
-                                if (document.getElementById('statCountTertarik')) document.getElementById('statCountTertarik').innerText = data.stats.countTertarik;
-                                if (document.getElementById('statCountMauTransfer')) document.getElementById('statCountMauTransfer').innerText = data.stats.countMauTransfer;
-                                if (document.getElementById('statCountSudahTransfer')) document.getElementById('statCountSudahTransfer').innerText = data.stats.countSudahTransfer;
-                                if (document.getElementById('statCountNo')) document.getElementById('statCountNo').innerText = data.stats.countNo;
+                                
+                                var totalLegendLabel = document.getElementById('totalLegendLabel');
+                                if (totalLegendLabel) {
+                                    var urlParams = new URLSearchParams(url.search);
+                                    var ikutKelas = urlParams.get('ikut_kelas');
+                                    if (ikutKelas === '1') {
+                                        totalLegendLabel.innerText = 'TOTAL SUDAH IKUT';
+                                    } else {
+                                        totalLegendLabel.innerText = 'TOTAL BELUM IKUT';
+                                    }
+                                }
+                                 if (document.getElementById('statCountCold')) document.getElementById('statCountCold').innerText = data.stats.countCold;
+                                 if (document.getElementById('statCountTertarik')) document.getElementById('statCountTertarik').innerText = data.stats.countTertarik;
+                                 if (document.getElementById('statCountMauTransfer')) document.getElementById('statCountMauTransfer').innerText = data.stats.countMauTransfer;
+                                 if (document.getElementById('statCountSudahTransfer')) document.getElementById('statCountSudahTransfer').innerText = data.stats.countSudahTransfer;
+                                 if (document.getElementById('statCountNo')) document.getElementById('statCountNo').innerText = data.stats.countNo;
 
                                 // Update prospek summary card
                                 if (data.stats.prospekCounts !== undefined) {
@@ -1036,6 +1143,7 @@
                             }
 
                             window.history.pushState({}, '', url.toString());
+                            applyLegendHighlight();
 
                             // Update active tab visuals
                             const params = new URLSearchParams(url.search);
@@ -1085,7 +1193,7 @@
                         sumber: document.getElementById('filterSumber').value,
                         provinsi: document.getElementById('filterProvinsi').value,
                         kota: document.getElementById('filterKota').value,
-                        status: document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : '',
+                        status: document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : (new URLSearchParams(window.location.search).get('status') || ''),
                         potensi: document.getElementById('filterPotensi') ? document.getElementById('filterPotensi').value : '',
                         kelas_id: document.getElementById('filterKelasId') ? document.getElementById('filterKelasId').value : ''
                     };
@@ -1215,6 +1323,9 @@
                             select.value = urlParams.get('daftar_kelas');
                         }
                     }
+
+                    // Highlight selected legend status card on initial load
+                    applyLegendHighlight();
                 });
 
                 // Intercept pagination link clicks for AJAX navigation
@@ -1311,14 +1422,14 @@
                                 {{-- Header for Admin in CS Helas Tab --}}
                                 @elseif($isAdminCSView)
                                     <th style="width: 220px;">Situasi Bisnis</th>
-                                    <th style="width: 150px; text-align:center;">Daftar Prospek</th>
+                                    <th style="width: 150px; text-align:center;">Potensi Ikut Kelas</th>
                                     <th style="width: 120px; text-align:center;">CS PIC</th>
                                     <th style="width: 80px; text-align:center;">Action</th>
-
+                                
                                 {{-- Header for CS-MBC role --}}
                                 @elseif($isCSMBCView)
                                     <th style="width: 220px;">Situasi Bisnis</th>
-                                    <th style="width: 150px; text-align:center;">Daftar Prospek</th>
+                                    <th style="width: 150px; text-align:center;">Potensi Ikut Kelas</th>
                                     {{-- <th style="min-width: 140px; text-align:center;">✅ Kelas yang Sudah Diikuti</th> --}}
                                     {{-- <th style="min-width: 140px; text-align:center;">🔔 Kelas yang Belum Diikuti</th> --}}
                                     <th style="width: 80px; text-align:center;">Action</th>
@@ -2239,6 +2350,7 @@
                 </div>
                 <div class="modal-body p-2 bg-light text-dark">
                     <input type="hidden" id="riwayat_data_id">
+                    <input type="hidden" id="riwayat_salesplan_id">
                     <div class="d-flex flex-wrap pb-2" id="fuCardsContainer">
                         @for($i = 1; $i <= 10; $i++)
                             <div class="px-1 mb-3 fu-card-container d-none" id="fu_card_{{ $i }}"
@@ -2334,15 +2446,154 @@
                 keyboard: false,
                 show: false
             });
+            $('#modalZoomBant').modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: false
+            });
         });
+
+        $(document).on('click', '.btn-zoom-bant', function () {
+            let $btn = $(this);
+            let id = $btn.data('id');
+            let nama = $btn.data('nama');
+            let kelasNama = $btn.attr('data-kelas-nama') || $btn.data('kelas-nama') || '';
+            let noWa = $btn.data('no-wa') || $btn.closest('tr').find('[data-field="no_wa"]').text().trim() || '-';
+            let canEdit = $btn.data('can-edit') == 1;
+
+            $('#zoomBant_data_id').val(id);
+            $('#zoomBantNama').text(nama);
+            $('#zoomBantNoWa').text(noWa);
+
+            if (kelasNama) {
+                $('#zoomBantKelas').text(kelasNama).show();
+                $('#zoomBantKelasPrefix').show();
+            } else {
+                $('#zoomBantKelas').text('').hide();
+                $('#zoomBantKelasPrefix').hide();
+            }
+
+            // Detect if M1T / Startup Muslim Indonesia
+            let isM1T = kelasNama.toLowerCase().includes('m1t') || kelasNama.toLowerCase().includes('muslim');
+            if (isM1T) {
+                $('#standardZoomSection').hide();
+                $('#m1tZoomSection').show();
+
+                // Populate M1T form
+                $('#zoomM1tSalesplanId').val($btn.data('salesplan-id') || '');
+                $('#zoomM1tDateTime').val($btn.attr('data-schedule-date') || '');
+                $('#zoomM1tLink').val($btn.attr('data-schedule-link') || '');
+                $('#zoomM1tStatus').val($btn.attr('data-schedule-status') || 'scheduled');
+                $('#zoomM1tNotes').val($btn.attr('data-schedule-notes') || '');
+            } else {
+                $('#standardZoomSection').show();
+                $('#m1tZoomSection').hide();
+            }
+
+            // Populate checkboxes
+            document.getElementById('zoomBantIkutZoom').checked  = $btn.attr('data-ikut-zoom') == '1';
+            document.getElementById('zoomBantBudget').checked    = $btn.attr('data-bant-budget') == '1';
+            document.getElementById('zoomBantAuthority').checked = $btn.attr('data-bant-authority') == '1';
+            document.getElementById('zoomBantTime').checked      = $btn.attr('data-bant-time') == '1';
+
+            // Enable/disable based on permissions
+            document.getElementById('zoomBantIkutZoom').disabled  = !canEdit;
+            document.getElementById('zoomBantBudget').disabled    = !canEdit;
+            document.getElementById('zoomBantAuthority').disabled = !canEdit;
+            document.getElementById('zoomBantTime').disabled      = !canEdit;
+
+            $('#modalZoomBant').modal('show');
+        });
+
+        // AJAX handler for saving One-on-One schedule
+        $(document).on('click', '#btnSaveZoomM1t', function () {
+            let dataId = $('#zoomBant_data_id').val();
+            let salesplanId = $('#zoomM1tSalesplanId').val();
+            let scheduledAt = $('#zoomM1tDateTime').val();
+            let zoomLink = $('#zoomM1tLink').val();
+            let status = $('#zoomM1tStatus').val();
+            let notes = $('#zoomM1tNotes').val();
+
+            if (!scheduledAt) {
+                alert('Silakan pilih Tanggal dan Waktu Pertemuan terlebih dahulu.');
+                return;
+            }
+
+            let $btn = $(this);
+            $btn.prop('disabled', true).text('Menyimpan...');
+
+            $.post('{{ route("zoom-schedule.store") }}', {
+                _token: '{{ csrf_token() }}',
+                data_id: dataId,
+                salesplan_id: salesplanId,
+                scheduled_at: scheduledAt,
+                zoom_link: zoomLink,
+                status: status,
+                notes: notes
+            }).done(function (r) {
+                $btn.prop('disabled', false).text('Simpan Jadwal Zoom');
+                if (r.success) {
+                    showDetailToast('Jadwal Zoom berhasil disimpan!');
+                    $('#modalZoomBant').modal('hide');
+
+                    // Dynamic sync to trigger button
+                    let $btnZoom = $(`.btn-zoom-bant[data-salesplan-id="${salesplanId}"]`);
+                    if ($btnZoom.length) {
+                        $btnZoom.attr('data-schedule-date', scheduledAt);
+                        $btnZoom.attr('data-schedule-link', zoomLink);
+                        $btnZoom.attr('data-schedule-status', status);
+                        $btnZoom.attr('data-schedule-notes', notes);
+                        if (status === 'done') {
+                            $btnZoom.attr('data-ikut-zoom', '1');
+                            $btnZoom.closest('tr').find('.checkbox-ikut-zoom').prop('checked', true);
+                        }
+                    }
+                } else {
+                    alert(r.message || 'Gagal menyimpan jadwal');
+                }
+            }).fail(function () {
+                $btn.prop('disabled', false).text('Simpan Jadwal Zoom');
+                alert('Terjadi kesalahan jaringan, silakan coba lagi.');
+            });
+        });
+
+        function saveZoomBantField(field, value) {
+            let id = $('#zoomBant_data_id').val();
+            if (!id) return;
+            
+            $.post('{{ route("admin.database.update-inline") }}', {
+                _token: '{{ csrf_token() }}',
+                id: id,
+                field: field,
+                value: value
+            }).done(function(r) {
+                if (r.success) {
+                    showDetailToast('Tersimpan!');
+                    
+                    // Sync the data attributes on the trigger buttons in that row!
+                    let $btnZoom = $(`.btn-zoom-bant[data-id="${id}"]`);
+                    if ($btnZoom.length) {
+                        $btnZoom.attr('data-' + field.replace('_', '-'), value);
+                    }
+                    
+                    let $btnDetail = $(`.btn-detail-peserta[data-id="${id}"]`);
+                    if ($btnDetail.length) {
+                        $btnDetail.attr('data-' + field.replace('_', '-'), value);
+                    }
+                }
+            });
+        }
 
         $(document).on('click', '.btn-riwayat', function () {
             let $btn = $(this);
             let id = $btn.data('id');
             let nama = $btn.data('nama');
+            let kelasNama = $btn.data('kelas-nama');
+            let salesplanId = $btn.attr('data-salesplan-id') || '';
 
             $('#riwayat_data_id').val(id);
-            $('#namaPeserta').text(nama);
+            $('#riwayat_salesplan_id').val(salesplanId);
+            $('#namaPeserta').text((kelasNama ? 'Kelas ' + kelasNama + ' - ' : '') + nama);
 
             // Hide all cards first
             $('.fu-card-container').addClass('d-none');
@@ -2388,6 +2639,7 @@
 
         $('#btnSimpanRiwayat').on('click', function () {
             let id = $('#riwayat_data_id').val();
+            let salesplanId = $('#riwayat_salesplan_id').val();
             let updates = {};
             for (let i = 1; i <= 10; i++) {
                 updates['fu' + i + '_hasil'] = $('#fu' + i + '_hasil').val();
@@ -2406,6 +2658,7 @@
                 data: {
                     _token: '{{ csrf_token() }}',
                     id: id,
+                    salesplan_id: salesplanId,
                     updates: updates
                 },
                 success: function (res) {
@@ -2425,7 +2678,10 @@
                     $('#modalRiwayat').modal('hide');
 
                     // Update data attributes in the trigger button
-                    let $triggerBtn = $(`.btn-riwayat[data-id="${id}"]`);
+                    let $triggerBtn = salesplanId 
+                        ? $(`.btn-riwayat[data-id="${id}"][data-salesplan-id="${salesplanId}"]`)
+                        : $(`.btn-riwayat[data-id="${id}"]`);
+
                     for (let i = 1; i <= 10; i++) {
                         $triggerBtn.attr('data-fu' + i + '-hasil', updates['fu' + i + '_hasil']);
                         $triggerBtn.attr('data-fu' + i + '-tindak-lanjut', updates['fu' + i + '_tindak_lanjut']);
@@ -3102,12 +3358,13 @@
                             const nama = $select.attr('data-nama');
                             const level = $select.attr('data-level');
                             const planId = response.plan_id;
-                            
+                            const kelasNama = $select.attr('data-kelas-nama') || '';
+                            const isM1T = kelasNama.toUpperCase().includes('M1T') || kelasNama.toUpperCase().includes('MUSLIM INDONESIA');
+
                             // Get potensi value from the same row
                             const $row = $select.closest('tr');
-                            const potensi = $row.find('.select-potensi-mbc-m1t').val();
 
-                            if (potensi === 'MBC') {
+                            if (!isM1T) {
                                 // Simplified popup for MBC
                                 Swal.fire({
                                     title: 'Setting Pembayaran MBC',
@@ -3298,7 +3555,7 @@
                     <div class="col-md-6">
                         <div class="card border-0 shadow-sm h-100" style="border-radius:10px;">
                             <div class="card-body py-3">
-                                <p class="text-muted small font-weight-bold mb-2" style="text-transform:uppercase; letter-spacing:.5px;">Potensi Kelas Selanjutnya</p>
+                                <p class="text-muted small font-weight-bold mb-2" id="detailPotensiLabel" style="text-transform:uppercase; letter-spacing:.5px;">Potensi Kelas Selanjutnya</p>
                                 <select id="detailPotensiSelect"
                                     class="form-control form-control-sm font-weight-bold"
                                     style="border-radius:8px; font-size:0.85rem; cursor:pointer;"
@@ -3440,8 +3697,182 @@
             </div>{{-- end modal-body --}}
 
             <div class="modal-footer border-0" style="background:#f4f6f9;">
-                <button type="button" class="btn btn-secondary btn-sm px-4" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i> Tutup
+                <button type="button" class="btn btn-success btn-sm px-4 shadow-sm" onclick="handleDetailSimpan()" style="border-radius: 8px; font-weight: bold;">
+                    <i class="fas fa-save mr-1"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ============================================================
+     MODAL ZOOM & BANT (BAT)
+     ============================================================ --}}
+<div class="modal fade" id="modalZoomBant" tabindex="-1" role="dialog" aria-labelledby="modalZoomBantLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important;">
+            {{-- Header --}}
+            <div class="modal-header border-0 pb-3" style="background: linear-gradient(135deg, #2D8CFF, #1570E0); color: #fff; padding: 16px 20px;">
+                <div>
+                    <h5 class="modal-title font-weight-bold mb-0" id="modalZoomBantLabel" style="font-size: 1.15rem; letter-spacing: 0.5px;">
+                        <i class="fas fa-video mr-2"></i> Zoom & BANT<span id="zoomBantKelasPrefix" style="display:none;"> - </span><span id="zoomBantKelas" style="display:none;"></span>
+                    </h5>
+                    <small class="d-block mt-1 opacity-75" style="font-size: 0.8rem;">
+                        <span id="zoomBantNama" class="font-weight-bold">-</span> &nbsp;|&nbsp; <span id="zoomBantNoWa">-</span>
+                    </small>
+                </div>
+                <button type="button" class="close text-white p-0 m-0" data-dismiss="modal" aria-label="Tutup" style="opacity: 1; font-size: 1.4rem; line-height: 1; outline: none; border: none; background: transparent;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            {{-- Body --}}
+            <div class="modal-body p-4 bg-light text-dark">
+                <input type="hidden" id="zoomBant_data_id">
+                
+                {{-- Standard Zoom Section --}}
+                <div id="standardZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center" style="gap: 12px;">
+                            <div class="d-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                <i class="fas fa-video" style="font-size: 1rem;"></i>
+                            </div>
+                            <div>
+                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Ikut Zoom</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Status keikutsertaan webinar Zoom</small>
+                            </div>
+                        </div>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="zoomBantIkutZoom"
+                                onchange="saveZoomBantField('ikut_zoom', this.checked ? 1 : 0)">
+                            <label class="custom-control-label" for="zoomBantIkutZoom" style="cursor: pointer;"></label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- M1T One-on-One Zoom Scheduling Section --}}
+                <div id="m1tZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px; display: none; background: #f8f9fc; border: 1px dashed #2a5298 !important;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-3" style="gap: 10px;">
+                            <div class="d-flex align-items-center justify-content-center bg-gradient-info text-white rounded-circle shadow-sm" style="width: 32px; height: 32px; flex-shrink: 0; background: linear-gradient(45deg, #36b9cc, #1a8a99);">
+                                <i class="fas fa-calendar-alt" style="font-size: 0.85rem;"></i>
+                            </div>
+                            <div>
+                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.85rem; line-height: 1.2;">Jadwal Zoom One-on-One</span>
+                                <small class="text-muted d-block" style="font-size: 0.68rem; line-height: 1.2;">Jadwalkan Zoom khusus M1T</small>
+                            </div>
+                        </div>
+
+                        <!-- Hidden salesplan id -->
+                        <input type="hidden" id="zoomM1tSalesplanId">
+
+                        <!-- Date Time Picker -->
+                        <div class="form-group mb-2">
+                            <label class="small font-weight-bold text-dark mb-1">Tanggal & Waktu Pertemuan</label>
+                            <input type="datetime-local" class="form-control form-control-sm" id="zoomM1tDateTime" style="border-radius: 6px;" required>
+                        </div>
+
+                        <!-- Zoom Link Input -->
+                        <div class="form-group mb-2">
+                            <label class="small font-weight-bold text-dark mb-1">Link Zoom Meeting</label>
+                            <input type="url" class="form-control form-control-sm" id="zoomM1tLink" placeholder="https://zoom.us/j/..." style="border-radius: 6px;">
+                        </div>
+
+                        <!-- Status Schedule -->
+                        <div class="form-group mb-2">
+                            <label class="small font-weight-bold text-dark mb-1">Status Penjadwalan</label>
+                            <select class="form-control form-control-sm" id="zoomM1tStatus" style="border-radius: 6px; font-weight: 600;">
+                                <option value="scheduled" class="text-primary">📅 Scheduled</option>
+                                <option value="done" class="text-success">✅ Done / Sukses</option>
+                                <option value="cancelled" class="text-danger">❌ Cancelled</option>
+                            </select>
+                        </div>
+
+                        <!-- Notes / Tindak Lanjut -->
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-dark mb-1">Catatan / Tindak Lanjut</label>
+                            <textarea class="form-control form-control-sm" id="zoomM1tNotes" rows="2" placeholder="Tulis hasil komunikasi/kesepakatan..." style="border-radius: 6px; font-size: 0.75rem;"></textarea>
+                        </div>
+
+                        <!-- Save button -->
+                        <button type="button" id="btnSaveZoomM1t" class="btn btn-primary btn-sm btn-block font-weight-bold py-2 shadow-sm border-0 text-white" style="border-radius: 8px; background: linear-gradient(45deg, #1e3c72, #2a5298);">
+                            Simpan Jadwal Zoom
+                        </button>
+                    </div>
+                </div>
+
+                {{-- BANT Section --}}
+                <h6 class="font-weight-bold text-uppercase text-secondary mb-3 mt-4" style="font-size: 0.7rem; letter-spacing: 1px;">Kualifikasi Prospek (BANT)</h6>
+                
+                {{-- Budget --}}
+                <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center" style="gap: 12px;">
+                            <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                <i class="fas fa-wallet" style="font-size: 0.95rem;"></i>
+                            </div>
+                            <div>
+                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Budget (B)</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Dana / Anggaran sesuai kriteria</small>
+                            </div>
+                        </div>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="zoomBantBudget"
+                                onchange="saveZoomBantField('bant_budget', this.checked ? 1 : 0)">
+                            <label class="custom-control-label" for="zoomBantBudget" style="cursor: pointer;"></label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Authority --}}
+                <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center" style="gap: 12px;">
+                            <div class="d-flex align-items-center justify-content-center bg-info text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                <i class="fas fa-user-shield" style="font-size: 0.95rem;"></i>
+                            </div>
+                            <div>
+                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Authority (A)</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Pengambil keputusan utama</small>
+                            </div>
+                        </div>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="zoomBantAuthority"
+                                onchange="saveZoomBantField('bant_authority', this.checked ? 1 : 0)">
+                            <label class="custom-control-label" for="zoomBantAuthority" style="cursor: pointer;"></label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Time --}}
+                <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center" style="gap: 12px;">
+                            <div class="d-flex align-items-center justify-content-center bg-warning text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                <i class="fas fa-clock" style="font-size: 0.95rem;"></i>
+                            </div>
+                            <div>
+                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Time (T)</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Waktu / Timeline kebutuhan mendesak</small>
+                            </div>
+                        </div>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="zoomBantTime"
+                                onchange="saveZoomBantField('bant_time', this.checked ? 1 : 0)">
+                            <label class="custom-control-label" for="zoomBantTime" style="cursor: pointer;"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {{-- Footer --}}
+            <div class="modal-footer bg-light border-0 justify-content-between py-3" style="padding: 12px 20px;">
+                <div class="d-flex align-items-center text-success" style="gap: 6px; font-size: 0.78rem;">
+                    <i class="fas fa-check-circle animate__animated animate__flash animate__infinite animate__slower"></i>
+                    <span class="font-weight-bold">Auto-Save Aktif</span>
+                </div>
+                <button type="button" class="btn btn-success btn-sm px-4 shadow-sm" data-dismiss="modal" style="border-radius: 20px; font-weight: bold; font-size: 0.75rem;">
+                    <i class="fas fa-save mr-1"></i> Simpan
                 </button>
             </div>
         </div>
@@ -3518,11 +3949,21 @@ document.addEventListener('click', function(e) {
     document.getElementById('detailIkutZoom').disabled      = disabled;
 
     // --- Potensi ---
+    var spData = JSON.parse(btn.dataset.salesplan || '[]');
+    var hasParticipated = spData.some(function(sp) {
+        return sp.status === 'sudah_transfer';
+    });
+    var labelElement = document.getElementById('detailPotensiLabel');
+    if (labelElement) {
+        labelElement.textContent = hasParticipated ? 'POTENSI KELAS SELANJUTNYA' : 'POTENSI KELAS PERTAMA';
+    }
+
     var potensi = (btn.dataset.potensi || '').toUpperCase();
     var potensiSelect = document.getElementById('detailPotensiSelect');
     potensiSelect.value    = potensi;
     potensiSelect.disabled = disabled;
     toggleDetailKelasDropdown(potensi, btn.dataset.kelasId, JSON.parse(btn.dataset.kelas || '[]'));
+
 
     // --- Status ---
     var statusSelect = document.getElementById('detailStatusSelect');
@@ -3550,6 +3991,8 @@ document.addEventListener('click', function(e) {
     } else {
         nomDiv.classList.add('d-none');
     }
+
+    updateModalStatusAndNominalFromSelectedClass();
 
     // --- Salesplan history ---
     var spData = JSON.parse(btn.dataset.salesplan || '[]');
@@ -3661,6 +4104,59 @@ function toggleDetailKelasDropdown(potensi, selectedKelasId, kelasList) {
     }
 }
 
+function updateModalStatusAndNominalFromSelectedClass() {
+    var select = document.getElementById('detailKelasSelect');
+    var selectedKelasId = select ? select.value : '';
+    
+    // Find the status and nominal from spData
+    var statusVal = 'cold';
+    var nominalVal = 0;
+    
+    var spData = [];
+    try {
+        var btn = document.querySelector('.btn-detail-peserta[data-id="' + _detailCurrentId + '"]');
+        if (btn) spData = JSON.parse(btn.dataset.salesplan || '[]');
+    } catch(e) {}
+    
+    // Search for a matching class_id in spData
+    var matchedSp = spData.find(function(sp) {
+        return String(sp.kelas_id) === String(selectedKelasId);
+    });
+    
+    if (matchedSp) {
+        statusVal = matchedSp.status || 'cold';
+        nominalVal = parseInt(matchedSp.nominal || '0');
+    }
+    
+    // Update the modal status input
+    var statusSelect = document.getElementById('detailStatusSelect');
+    if (statusSelect) {
+        statusSelect.value = statusVal;
+    }
+    
+    // Update nominal wrapper and input
+    var nomInput   = document.getElementById('detailNominalInput');
+    var nomWrap    = document.getElementById('wrapperNominalBayar');
+    var nomDiv     = document.getElementById('detailNominalDisplay');
+    
+    if (nomInput && nomWrap) {
+        if (statusVal === 'sudah_transfer') {
+            nomWrap.classList.remove('d-none');
+            nomInput.value = nominalVal > 0 ? nominalVal.toLocaleString('id-ID') : '';
+            if (nomDiv) {
+                nomDiv.textContent = 'Rp ' + nominalVal.toLocaleString('id-ID');
+                nomDiv.classList.remove('d-none');
+            }
+        } else {
+            nomWrap.classList.add('d-none');
+            nomInput.value = '';
+            if (nomDiv) {
+                nomDiv.classList.add('d-none');
+            }
+        }
+    }
+}
+
 function saveDetailBant(field, value) {
     if (!_detailCurrentId) return;
     $.post('{{ route("admin.database.update-inline") }}', {
@@ -3696,6 +4192,10 @@ function saveDetailPotensi() {
 function saveDetailKelas() {
     if (!_detailCurrentId) return;
     var kelasId = document.getElementById('detailKelasSelect').value;
+    
+    // Instantly update status/nominal UI to match selected class
+    updateModalStatusAndNominalFromSelectedClass();
+
     $.post('{{ route("admin.database.update-inline") }}', {
         _token: '{{ csrf_token() }}',
         id: _detailCurrentId,
@@ -3710,6 +4210,7 @@ function saveDetailStatus() {
     if (!_detailCurrentId) return;
     var status = document.getElementById('detailStatusSelect').value;
     var nominal = document.getElementById('detailNominalInput').value;
+    var kelasId = document.getElementById('detailKelasSelect').value;
     
     // Toggle Nominal Wrapper
     var wrap = document.getElementById('wrapperNominalBayar');
@@ -3722,29 +4223,107 @@ function saveDetailStatus() {
     $.post('{{ route("admin.database.update-status-direct") }}', {
         _token: '{{ csrf_token() }}',
         data_id: _detailCurrentId,
+        kelas_id: kelasId,
         status: status,
         nominal: nominal
     }).done(function(r) {
         if (r.success) {
             showDetailToast('Status & Nominal tersimpan!');
             
-            // --- AUTO OPEN SETTING PEMBAYARAN UNTUK M1T ---
+            // Sync status/badge in the main table row in real-time
+            var selectInTable = document.querySelector(`.inline-status-select[data-data-id="${_detailCurrentId}"][data-kelas-id="${kelasId}"]`);
+            if (selectInTable) {
+                selectInTable.value = status;
+                var statusConfig = {
+                    'cold':           { bg: '#ffffff', text: '#6c757d' },
+                    'tertarik':       { bg: '#F2F527', text: '#000000' },
+                    'mau_transfer':   { bg: '#3CDE1D', text: '#000000' },
+                    'sudah_transfer': { bg: '#1786E6', text: '#ffffff' },
+                    'no':             { bg: '#E61717', text: '#ffffff' }
+                };
+                var cfg = statusConfig[status] || statusConfig['cold'];
+                selectInTable.style.backgroundColor = cfg.bg;
+                selectInTable.style.color = cfg.text;
+                
+                var badge = selectInTable.previousElementSibling;
+                if (badge && badge.classList.contains('badge')) {
+                    badge.style.background = cfg.bg;
+                    badge.style.color = cfg.text;
+                    let baseText = badge.textContent.replace(' ✓', '').trim();
+                    if (status === 'sudah_transfer') {
+                        badge.innerHTML = baseText + ' ✓';
+                    } else {
+                        badge.innerHTML = baseText;
+                    }
+                }
+            }
+
+            // --- AUTO OPEN SETTING PEMBAYARAN UNTUK M1T / MBC ---
             if (status === 'sudah_transfer') {
                 var kelasSelect = document.getElementById('detailKelasSelect');
                 if (kelasSelect && kelasSelect.selectedIndex >= 0) {
                     var selectedText = kelasSelect.options[kelasSelect.selectedIndex].text.toUpperCase();
+                    var name = document.getElementById('detailNama').textContent;
+                    
+                    // Tutup modal detail agar tidak tumpang tindih
+                    $('#modalDetailPeserta').modal('hide');
                     
                     if (selectedText.includes('M1T') || selectedText.includes('MUSLIM INDONESIA')) {
-                        var name = document.getElementById('detailNama').textContent;
-                        
-                        // Tutup modal detail agar tidak tumpang tindih
-                        $('#modalDetailPeserta').modal('hide');
-                        
                         // Tunggu sebentar agar modal pertama benar-benar tertutup baru buka yang kedua
                         setTimeout(function() {
                             if (window.showMonthSelectionModal) {
                                 window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
                             }
+                        }, 500);
+                    } else {
+                        // Non-M1T (MBC classes) -> show nominal popup
+                        setTimeout(function() {
+                            Swal.fire({
+                                title: 'Setting Pembayaran MBC',
+                                text: 'Masukkan Nominal Pembayaran untuk ' + name,
+                                input: 'text',
+                                inputPlaceholder: 'Contoh: 1.500.000',
+                                showCancelButton: true,
+                                confirmButtonText: 'Simpan',
+                                cancelButtonText: 'Batal',
+                                customClass: {
+                                    confirmButton: 'btn btn-primary rounded-pill px-4',
+                                    cancelButton: 'btn btn-secondary rounded-pill px-4'
+                                },
+                                buttonsStyling: false,
+                                didOpen: () => {
+                                    const input = Swal.getInput();
+                                    $(input).on('input', function() {
+                                        let val = this.value.replace(/[^0-9]/g, '');
+                                        this.value = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                    });
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    let nominalVal = result.value.replace(/[^0-9]/g, '');
+                                    if (!nominalVal) {
+                                        Swal.fire('Error', 'Nominal harus diisi', 'error');
+                                        return;
+                                    }
+                                    
+                                    // Save nominal via AJAX
+                                    $.ajax({
+                                        url: "{{ route('admin.salesplan.update-selected-months') }}",
+                                        type: "POST",
+                                        data: {
+                                            _token: "{{ csrf_token() }}",
+                                            id: r.plan_id,
+                                            spp_awal: nominalVal,
+                                            nominal: nominalVal, // Also sync to SalesPlan nominal
+                                            selected_months: JSON.stringify({}),
+                                            tanggal_masuk: new Date().toISOString().split('T')[0]
+                                        },
+                                        success: function(res) {
+                                            Swal.fire({ icon: 'success', title: 'Berhasil Disimpan', timer: 1500 });
+                                        }
+                                    });
+                                }
+                            });
                         }, 500);
                     }
                 }
@@ -3777,6 +4356,8 @@ function formatRupiah(input) {
 function updateStatusDirectTable(dataId, el) {
     var status = el.value;
     var name = el.dataset.nama || 'Peserta';
+    var kelasNama = el.dataset.kelasNama || '';
+    var isM1T = kelasNama.toUpperCase().includes('M1T') || kelasNama.toUpperCase().includes('MUSLIM INDONESIA');
     
     // Config warna sama dengan row.blade.php
     var statusConfig = {
@@ -3790,13 +4371,6 @@ function updateStatusDirectTable(dataId, el) {
     el.style.backgroundColor = cfg.bg;
     el.style.color = cfg.text;
 
-    // Update row background too
-    var row = el.closest('tr');
-    if (row) {
-        row.style.backgroundColor = cfg.bg;
-        row.style.color = cfg.text;
-    }
-
     $.post('{{ route("admin.database.update-status-direct") }}', {
         _token: '{{ csrf_token() }}',
         data_id: dataId,
@@ -3807,18 +4381,316 @@ function updateStatusDirectTable(dataId, el) {
             showDetailToast('Status diperbarui!');
             
             if (status === 'sudah_transfer') {
-                setTimeout(function() {
-                    if (window.showMonthSelectionModal) {
-                        // Buka modal pembayaran M1T (Default nominal & level Grow Up as previously requested/implemented)
-                        window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
-                    }
-                }, 500);
+                if (isM1T) {
+                    setTimeout(function() {
+                        if (window.showMonthSelectionModal) {
+                            // Buka modal pembayaran M1T (Default nominal & level Grow Up as previously requested/implemented)
+                            window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
+                        }
+                    }, 500);
+                } else {
+                    // Non-M1T (MBC classes) -> show nominal popup
+                    setTimeout(function() {
+                        Swal.fire({
+                            title: 'Setting Pembayaran MBC',
+                            text: 'Masukkan Nominal Pembayaran untuk ' + name,
+                            input: 'text',
+                            inputPlaceholder: 'Contoh: 1.500.000',
+                            showCancelButton: true,
+                            confirmButtonText: 'Simpan',
+                            cancelButtonText: 'Batal',
+                            customClass: {
+                                confirmButton: 'btn btn-primary rounded-pill px-4',
+                                cancelButton: 'btn btn-secondary rounded-pill px-4'
+                            },
+                            buttonsStyling: false,
+                            didOpen: () => {
+                                const input = Swal.getInput();
+                                $(input).on('input', function() {
+                                    let val = this.value.replace(/[^0-9]/g, '');
+                                    this.value = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                });
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                let nominalVal = result.value.replace(/[^0-9]/g, '');
+                                if (!nominalVal) {
+                                    Swal.fire('Error', 'Nominal harus diisi', 'error');
+                                    return;
+                                }
+                                
+                                // Save nominal via AJAX
+                                $.ajax({
+                                    url: "{{ route('admin.salesplan.update-selected-months') }}",
+                                    type: "POST",
+                                    data: {
+                                        _token: "{{ csrf_token() }}",
+                                        id: r.plan_id,
+                                        spp_awal: nominalVal,
+                                        nominal: nominalVal, // Also sync to SalesPlan nominal
+                                        selected_months: JSON.stringify({}),
+                                        tanggal_masuk: new Date().toISOString().split('T')[0]
+                                    },
+                                    success: function(res) {
+                                        Swal.fire({ icon: 'success', title: 'Berhasil Disimpan', timer: 1500 });
+                                    }
+                                });
+                            }
+                        });
+                    }, 500);
+                }
             }
         } else {
             Swal.fire('Gagal!', r.message || 'Gagal update status', 'error');
         }
     }).fail(function() {
         Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+    });
+}
+
+function updateInlineStatusFromTable(selectEl) {
+    var dataId = selectEl.dataset.dataId;
+    var kelasId = selectEl.dataset.kelasId;
+    var kelasNama = selectEl.dataset.kelasNama || '';
+    var newStatus = selectEl.value;
+    var isM1T = kelasNama.toUpperCase().includes('M1T') || kelasNama.toUpperCase().includes('MUSLIM INDONESIA');
+    
+    var statusConfig = {
+        'cold':           { bg: '#ffffff', text: '#6c757d' },
+        'tertarik':       { bg: '#F2F527', text: '#000000' },
+        'mau_transfer':   { bg: '#3CDE1D', text: '#000000' },
+        'sudah_transfer': { bg: '#1786E6', text: '#ffffff' },
+        'no':             { bg: '#E61717', text: '#ffffff' }
+    };
+    var cfg = statusConfig[newStatus] || statusConfig['cold'];
+    selectEl.style.backgroundColor = cfg.bg;
+    selectEl.style.color = cfg.text;
+    selectEl.style.opacity = '0.5';
+
+    $.post('{{ route("admin.database.update-status-direct") }}', {
+        _token: '{{ csrf_token() }}',
+        data_id: dataId,
+        kelas_id: kelasId,
+        status: newStatus,
+        nominal: ''
+    }).done(function(r) {
+        selectEl.style.opacity = '1';
+        if (r.success) {
+            showDetailToast('Status prospek berhasil diperbarui!');
+            
+            // Sync status/badge styling in real-time
+            var badge = selectEl.previousElementSibling;
+            if (badge && badge.classList.contains('badge')) {
+                badge.style.background = cfg.bg;
+                badge.style.color = cfg.text;
+                let baseText = badge.textContent.replace(' ✓', '').trim();
+                if (newStatus === 'sudah_transfer') {
+                    badge.innerHTML = baseText + ' ✓';
+                } else {
+                    badge.innerHTML = baseText;
+                }
+            }
+
+            // Auto open setting pembayaran jika status sudah_transfer
+            if (newStatus === 'sudah_transfer') {
+                var row = selectEl.closest('tr');
+                var name = row ? (row.querySelector('[data-field="nama"]')?.textContent?.trim() || 'Peserta') : 'Peserta';
+                
+                if (isM1T) {
+                    setTimeout(function() {
+                        if (window.showMonthSelectionModal) {
+                            window.showMonthSelectionModal(r.plan_id, name, '', '', '', '2.000.000', '500.000', '1.500.000', '2.000.000', 'Grow Up', '');
+                        }
+                    }, 500);
+                } else {
+                    // Non-M1T (MBC classes) -> show nominal popup
+                    setTimeout(function() {
+                        Swal.fire({
+                            title: 'Setting Pembayaran MBC',
+                            text: 'Masukkan Nominal Pembayaran untuk ' + name,
+                            input: 'text',
+                            inputPlaceholder: 'Contoh: 1.500.000',
+                            showCancelButton: true,
+                            confirmButtonText: 'Simpan',
+                            cancelButtonText: 'Batal',
+                            customClass: {
+                                confirmButton: 'btn btn-primary rounded-pill px-4',
+                                cancelButton: 'btn btn-secondary rounded-pill px-4'
+                            },
+                            buttonsStyling: false,
+                            didOpen: () => {
+                                const input = Swal.getInput();
+                                $(input).on('input', function() {
+                                    let val = this.value.replace(/[^0-9]/g, '');
+                                    this.value = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                });
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                let nominalVal = result.value.replace(/[^0-9]/g, '');
+                                if (!nominalVal) {
+                                    Swal.fire('Error', 'Nominal harus diisi', 'error');
+                                    return;
+                                }
+                                
+                                // Save nominal via AJAX
+                                $.ajax({
+                                    url: "{{ route('admin.salesplan.update-selected-months') }}",
+                                    type: "POST",
+                                    data: {
+                                        _token: "{{ csrf_token() }}",
+                                        id: r.plan_id,
+                                        spp_awal: nominalVal,
+                                        nominal: nominalVal, // Also sync to SalesPlan nominal
+                                        selected_months: JSON.stringify({}),
+                                        tanggal_masuk: new Date().toISOString().split('T')[0]
+                                    },
+                                    success: function(res) {
+                                        Swal.fire({ icon: 'success', title: 'Berhasil Disimpan', timer: 1500 });
+                                    }
+                                });
+                            }
+                        });
+                    }, 500);
+                }
+            }
+        } else {
+            Swal.fire('Gagal!', r.message || 'Gagal update status', 'error');
+        }
+    }).fail(function() {
+        selectEl.style.opacity = '1';
+        Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+    });
+}
+
+function showInlineAddClassDropdown(btn) {
+    var container = btn.closest('.inline-add-class-wrapper');
+    if (container) {
+        var select = container.querySelector('.inline-add-class-select');
+        if (select) {
+            select.classList.remove('d-none');
+            select.focus();
+        }
+        btn.classList.add('d-none');
+    }
+}
+
+function saveNewProspectFromTable(selectEl, dataId) {
+    if (!selectEl.value) {
+        // User cancelled, toggle back to + button
+        selectEl.classList.add('d-none');
+        var container = selectEl.closest('.inline-add-class-wrapper');
+        if (container) {
+            var btn = container.querySelector('.btn-success');
+            if (btn) btn.classList.remove('d-none');
+        }
+        return;
+    }
+
+    var kelasId = selectEl.value;
+    var namaKls = selectEl.options[selectEl.selectedIndex].text;
+    var shortKls = namaKls.includes('Muslim Indonesia') ? 'M1T' : (namaKls.includes('Muda Indonesia') ? 'Start-Up Muda' : namaKls);
+
+    selectEl.style.opacity = '0.5';
+    $.post('{{ route("admin.database.update-inline") }}', {
+        _token: '{{ csrf_token() }}',
+        id: dataId,
+        field: 'kelas_id',
+        value: kelasId
+    }).done(function(r) {
+        selectEl.style.opacity = '1';
+        if (r.success) {
+            showDetailToast('Prospek kelas baru berhasil ditambahkan!');
+            
+            // Build new row element
+            var newElem = document.createElement('div');
+            newElem.className = 'd-flex align-items-center justify-content-center mb-1';
+            newElem.style.gap = '8px';
+            newElem.innerHTML = `
+                <span class="badge shadow-sm" style="background:#ffffff;color:#6c757d;font-size:0.75rem;border-radius:8px;padding:6px 12px;border:1px solid #ccc; text-wrap: normal; word-break: break-word; min-width: 110px;">
+                    ${shortKls}
+                </span>
+                
+                <select class="form-control form-control-sm inline-status-select shadow-sm" 
+                        data-data-id="${dataId}" 
+                        data-kelas-id="${kelasId}"
+                        data-kelas-nama="${namaKls}"
+                        style="width: 125px; font-size: 0.75rem; font-weight: bold; border-radius: 8px; padding: 2px 6px; height: auto; cursor: pointer; background-color: #ffffff; color: #6c757d; border: 1px solid #ccc;"
+                        onchange="updateInlineStatusFromTable(this)">
+                    <option value="cold" selected style="background:#ffffff; color:#6c757d;">Cold</option>
+                    <option value="tertarik" style="background:#F2F527; color:#000000;">Tertarik</option>
+                    <option value="mau_transfer" style="background:#3CDE1D; color:#000000;">Mau Transfer</option>
+                    <option value="sudah_transfer" style="background:#1786E6; color:#ffffff;">Sudah Transfer</option>
+                </select>
+                
+                <button type="button" class="btn btn-sm btn-outline-danger p-0"
+                        style="width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; margin-left: 2px; transition: all 0.2s;"
+                        onclick="deleteProspectFromTable(this, ${dataId}, ${kelasId})"
+                        title="Hapus Prospek Kelas Ini">
+                    <i class="fas fa-trash-alt" style="font-size: 0.65rem;"></i>
+                </button>
+            `;
+            
+            // Insert it before the wrapper
+            var wrapper = selectEl.closest('.inline-add-class-wrapper');
+            if (wrapper) {
+                wrapper.parentNode.insertBefore(newElem, wrapper);
+            }
+            
+            // Reset & toggle back the add class wrapper inputs
+            selectEl.value = '';
+            selectEl.classList.add('d-none');
+            if (wrapper) {
+                var addBtn = wrapper.querySelector('.btn-success');
+                if (addBtn) addBtn.classList.remove('d-none');
+            }
+        } else {
+            Swal.fire('Gagal!', r.message || 'Gagal menambahkan kelas', 'error');
+        }
+    }).fail(function() {
+        selectEl.style.opacity = '1';
+        Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+    });
+}
+
+function deleteProspectFromTable(btn, dataId, kelasId) {
+    Swal.fire({
+        title: 'Hapus Prospek Kelas?',
+        text: 'Apakah Anda yakin ingin menghapus prospek kelas ini?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            btn.style.opacity = '0.5';
+            btn.disabled = true;
+            
+            $.post('{{ route("admin.database.delete-prospect-direct") }}', {
+                _token: '{{ csrf_token() }}',
+                data_id: dataId,
+                kelas_id: kelasId
+            }).done(function(r) {
+                if (r.success) {
+                    showDetailToast('Prospek kelas berhasil dihapus!');
+                    // Seamlessly remove the DOM row item container!
+                    var rowContainer = btn.closest('.d-flex.align-items-center.justify-content-center.mb-1');
+                    if (rowContainer) {
+                        rowContainer.remove();
+                    }
+                } else {
+                    Swal.fire('Gagal!', r.message || 'Gagal menghapus prospek', 'error');
+                    btn.style.opacity = '1';
+                    btn.disabled = false;
+                }
+            }).fail(function() {
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+                btn.style.opacity = '1';
+                btn.disabled = false;
+            });
+        }
     });
 }
 
@@ -3829,6 +4701,24 @@ function showDetailToast(msg) {
     document.body.appendChild(toast);
     setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 400); }, 1500);
 }
+
+function handleDetailSimpan() {
+    // Force blur on any active input/select to trigger AJAX auto-saves
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+    
+    showDetailToast('Semua data berhasil disimpan!');
+    
+    // Close the modal
+    $('#modalDetailPeserta').modal('hide');
+    
+    // Reload page to reflect stats and table updates instantly
+    setTimeout(function() {
+        window.location.reload();
+    }, 450);
+}
+
     // --- Read More Toggle ---
     jQuery(document).ready(function($) {
         $(document).on('click', '.btn-read-more', function(e) {

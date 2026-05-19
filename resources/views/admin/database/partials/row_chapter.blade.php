@@ -20,7 +20,7 @@
     $canEdit  = !in_array($userRole, ['marketing', 'administrator', 'operasional']);
 @endphp
 
-<tr data-id="{{ $item->id }}" style="background-color: {{ $currentConfig['rowBg'] }}; color: {{ $currentConfig['text'] }}; transition: background-color 0.3s ease;">
+<tr data-id="{{ $item->id }}" style="background-color: #ffffff; color: #212529; transition: background-color 0.3s ease;">
     {{-- 1. No --}}
     <td class="text-center" style="vertical-align: middle;">
         {{ isset($data) && method_exists($data, 'firstItem') ? $data->firstItem() + $loop->index : $loop->iteration }}
@@ -41,6 +41,7 @@
                     {{ $item->no_wa }}
                 </span>
             </div>
+            <!-- Buttons -->
             <div class="d-flex align-items-center gap-1 mt-1">
                 @if($item->no_wa)
                     @php $waNumber = preg_replace('/^0/', '62', $item->no_wa); @endphp
@@ -112,12 +113,92 @@
 
     {{-- 8. Prospek M1T --}}
     <td class="text-center" style="vertical-align: middle;">
-        <span class="badge shadow-sm" style="background:#25799E;color:#fff;font-size:0.85rem;font-weight:800;border-radius:8px;padding:7px 18px;border:2px solid #fff;">M1T</span>
+        <div class="d-flex align-items-center justify-content-center" style="gap: 8px;">
+            @php 
+                $sp = $latestSp; 
+                $schedule = $sp ? \App\Models\ZoomSchedule::where('salesplan_id', $sp->id)->first() : null;
+            @endphp
+            <!-- Dedicated Zoom button for this prospect -->
+            <button type="button" class="btn btn-zoom-bant p-0 d-flex align-items-center justify-content-center border-0 shadow-sm text-white"
+                    style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(45deg, #2D8CFF, #1570E0); transition: all 0.2s;"
+                    data-id="{{ $item->id }}" 
+                    data-nama="{{ $item->nama }}"
+                    data-kelas-nama="M1T"
+                    data-salesplan-id="{{ $sp ? $sp->id : '' }}"
+                    data-schedule-date="{{ $schedule ? $schedule->scheduled_at->format('Y-m-d\TH:i') : '' }}"
+                    data-schedule-link="{{ $schedule ? $schedule->zoom_link : '' }}"
+                    data-schedule-status="{{ $schedule ? $schedule->status : '' }}"
+                    data-schedule-notes="{{ $schedule ? $schedule->notes : '' }}"
+                    data-no-wa="{{ $item->no_wa }}"
+                    data-can-edit="{{ $canEdit ? '1' : '0' }}"
+                    data-bant-budget="{{ $item->bant_budget }}"
+                    data-bant-authority="{{ $item->bant_authority }}"
+                    data-bant-time="{{ $item->bant_time }}"
+                    data-ikut-zoom="{{ $item->ikut_zoom }}"
+                    title="Zoom & BANT (M1T)">
+                <i class="fas fa-video" style="font-size: 0.7rem;"></i>
+            </button>
+            
+            <!-- Follow Up button for this specific class -->
+            <button type="button" class="btn btn-primary btn-sm btn-riwayat shadow-sm border-0 px-2"
+                    style="height: 24px; line-height: 1; font-size: 0.65rem; font-weight: 700; background: linear-gradient(45deg, #4e73df, #224abe); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;"
+                    data-kelas-nama="M1T"
+                    data-salesplan-id="{{ $sp ? $sp->id : '' }}"
+                    data-id="{{ $item->id }}" data-nama="{{ $item->nama }}" 
+                    data-fu1="{{ $sp ? $sp->fu1_hasil : '' }}"
+                    data-fu1-wa="{{ $sp && $sp->fu1_wa ? 1 : 0 }}" data-fu1-telp="{{ $sp && $sp->fu1_telp ? 1 : 0 }}"
+                    data-fu1-at="{{ $sp && $sp->fu1_at ? ($sp->fu1_at instanceof \Carbon\Carbon ? $sp->fu1_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu1_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu1-hasil="{{ $sp ? $sp->fu1_hasil : '' }}" data-fu1-tindak-lanjut="{{ $sp ? $sp->fu1_tindak_lanjut : '' }}"
+                    data-fu2="{{ $sp ? $sp->fu2_hasil : '' }}"
+                    data-fu2-wa="{{ $sp && $sp->fu2_wa ? 1 : 0 }}" data-fu2-telp="{{ $sp && $sp->fu2_telp ? 1 : 0 }}"
+                    data-fu2-at="{{ $sp && $sp->fu2_at ? ($sp->fu2_at instanceof \Carbon\Carbon ? $sp->fu2_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu2_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu2-hasil="{{ $sp ? $sp->fu2_hasil : '' }}" data-fu2-tindak-lanjut="{{ $sp ? $sp->fu2_tindak_lanjut : '' }}"
+                    data-fu3="{{ $sp ? $sp->fu3_hasil : '' }}"
+                    data-fu3-wa="{{ $sp && $sp->fu3_wa ? 1 : 0 }}" data-fu3-telp="{{ $sp && $sp->fu3_telp ? 1 : 0 }}"
+                    data-fu3-at="{{ $sp && $sp->fu3_at ? ($sp->fu3_at instanceof \Carbon\Carbon ? $sp->fu3_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu3_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu3-hasil="{{ $sp ? $sp->fu3_hasil : '' }}" data-fu3-tindak-lanjut="{{ $sp ? $sp->fu3_tindak_lanjut : '' }}"
+                    data-fu4="{{ $sp ? $sp->fu4_hasil : '' }}"
+                    data-fu4-wa="{{ $sp && $sp->fu4_wa ? 1 : 0 }}" data-fu4-telp="{{ $sp && $sp->fu4_telp ? 1 : 0 }}"
+                    data-fu4-at="{{ $sp && $sp->fu4_at ? ($sp->fu4_at instanceof \Carbon\Carbon ? $sp->fu4_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu4_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu4-hasil="{{ $sp ? $sp->fu4_hasil : '' }}" data-fu4-tindak-lanjut="{{ $sp ? $sp->fu4_tindak_lanjut : '' }}"
+                    data-fu5="{{ $sp ? $sp->fu5_hasil : '' }}"
+                    data-fu5-wa="{{ $sp && $sp->fu5_wa ? 1 : 0 }}" data-fu5-telp="{{ $sp && $sp->fu5_telp ? 1 : 0 }}"
+                    data-fu5-at="{{ $sp && $sp->fu5_at ? ($sp->fu5_at instanceof \Carbon\Carbon ? $sp->fu5_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu5_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu5-hasil="{{ $sp ? $sp->fu5_hasil : '' }}" data-fu5-tindak-lanjut="{{ $sp ? $sp->fu5_tindak_lanjut : '' }}"
+                    data-fu6="{{ $sp ? $sp->fu6_hasil : '' }}"
+                    data-fu6-wa="{{ $sp && $sp->fu6_wa ? 1 : 0 }}" data-fu6-telp="{{ $sp && $sp->fu6_telp ? 1 : 0 }}"
+                    data-fu6-at="{{ $sp && $sp->fu6_at ? ($sp->fu6_at instanceof \Carbon\Carbon ? $sp->fu6_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu6_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu6-hasil="{{ $sp ? $sp->fu6_hasil : '' }}" data-fu6-tindak-lanjut="{{ $sp ? $sp->fu6_tindak_lanjut : '' }}"
+                    data-fu7="{{ $sp ? $sp->fu7_hasil : '' }}"
+                    data-fu7-wa="{{ $sp && $sp->fu7_wa ? 1 : 0 }}" data-fu7-telp="{{ $sp && $sp->fu7_telp ? 1 : 0 }}"
+                    data-fu7-at="{{ $sp && $sp->fu7_at ? ($sp->fu7_at instanceof \Carbon\Carbon ? $sp->fu7_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu7_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu7-hasil="{{ $sp ? $sp->fu7_hasil : '' }}" data-fu7-tindak-lanjut="{{ $sp ? $sp->fu7_tindak_lanjut : '' }}"
+                    data-fu8="{{ $sp ? $sp->fu8_hasil : '' }}"
+                    data-fu8-wa="{{ $sp && $sp->fu8_wa ? 1 : 0 }}" data-fu8-telp="{{ $sp && $sp->fu8_telp ? 1 : 0 }}"
+                    data-fu8-at="{{ $sp && $sp->fu8_at ? ($sp->fu8_at instanceof \Carbon\Carbon ? $sp->fu8_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu8_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu8-hasil="{{ $sp ? $sp->fu8_hasil : '' }}" data-fu8-tindak-lanjut="{{ $sp ? $sp->fu8_tindak_lanjut : '' }}"
+                    data-fu9="{{ $sp ? $sp->fu9_hasil : '' }}"
+                    data-fu9-wa="{{ $sp && $sp->fu9_wa ? 1 : 0 }}" data-fu9-telp="{{ $sp && $sp->fu9_telp ? 1 : 0 }}"
+                    data-fu9-at="{{ $sp && $sp->fu9_at ? ($sp->fu9_at instanceof \Carbon\Carbon ? $sp->fu9_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu9_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu9-hasil="{{ $sp ? $sp->fu9_hasil : '' }}" data-fu9-tindak-lanjut="{{ $sp ? $sp->fu9_tindak_lanjut : '' }}"
+                    data-fu10="{{ $sp ? $sp->fu10_hasil : '' }}" data-fu10-wa="{{ $sp && $sp->fu10_wa ? 1 : 0 }}"
+                    data-fu10-telp="{{ $sp && $sp->fu10_telp ? 1 : 0 }}"
+                    data-fu10-at="{{ $sp && $sp->fu10_at ? ($sp->fu10_at instanceof \Carbon\Carbon ? $sp->fu10_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu10_at)->format('d/m/Y H:i')) : '' }}"
+                    data-fu10-hasil="{{ $sp ? $sp->fu10_hasil : '' }}" data-fu10-tindak-lanjut="{{ $sp ? $sp->fu10_tindak_lanjut : '' }}">
+                Follow Up
+            </button>
+            <span class="badge shadow-sm" style="background:#25799E;color:#fff;font-size:0.85rem;font-weight:800;border-radius:8px;padding:7px 18px;border:2px solid #fff;">M1T</span>
+        </div>
     </td>
 
     {{-- 9. Status Potensi --}}
     <td class="text-center" style="vertical-align: middle;">
-        <select class="form-control form-control-sm font-weight-bold status-direct-select" style="border-radius:10px;font-size:0.75rem;height:35px;background-color:{{ $currentConfig['bg'] }};color:{{ $currentConfig['text'] }};" onchange="updateStatusDirectTable('{{ $item->id }}', this)" {{ $userRole === 'administrator' ? 'disabled' : ($canEdit ? '' : 'disabled') }}>
+        <select class="form-control form-control-sm font-weight-bold status-direct-select" 
+                data-nama="{{ $item->nama }}"
+                data-kelas-nama="{{ $latestSp->kelas?->nama_kelas ?? 'Startup Muslim Indonesia' }}"
+                style="border-radius:10px;font-size:0.75rem;height:35px;background-color:{{ $currentConfig['bg'] }};color:{{ $currentConfig['text'] }};" 
+                onchange="updateStatusDirectTable('{{ $item->id }}', this)" 
+                {{ $userRole === 'administrator' ? 'disabled' : ($canEdit ? '' : 'disabled') }}>
             <option value="cold"           {{ $statusKey==='cold'           ?'selected':'' }}>⚪ Cold</option>
             <option value="tertarik"       {{ $statusKey==='tertarik'       ?'selected':'' }}>🟡 Tertarik</option>
             <option value="mau_transfer"   {{ $statusKey==='mau_transfer'   ?'selected':'' }}>🟢 Mau Transfer</option>
@@ -144,6 +225,7 @@
 
                 $spJson = $item->salesplan->map(function($sp) {
                     return [
+                        'kelas_id' => $sp->kelas_id,
                         'kelas' => $sp->kelas->nama_kelas ?? 'N/A',
                         'status' => $sp->status,
                         'nominal' => $sp->nominal
@@ -151,7 +233,7 @@
                 })->toJson(JSON_HEX_APOS | JSON_HEX_QUOT);
             @endphp
             @if($userRole !== 'administrator')
-                <button type="button" class="btn btn-sm btn-detail-peserta text-white mb-1" 
+                <button type="button" class="btn btn-sm btn-detail-peserta text-white mb-1 d-none" 
                     style="background:#25799E; border-radius:8px; width:110px;" 
                     data-id="{{ $item->id }}" 
                     data-nama="{{ $item->nama }}" 

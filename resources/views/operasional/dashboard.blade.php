@@ -398,8 +398,8 @@
                                     <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">PERALATAN</th>
                                     <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">STATUS</th>
                                     <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">KETERANGAN</th>
-                                    <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">Ceklist Perbaikan</th>
-                                    <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">TANGGAL PERBAIKAN</th>
+                                    <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">JUMLAH</th>
+                                    <th class="text-center" style="background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;">TANGGAL PEMBELIAN</th>
                                     <th class="text-center" style="width: 50px; background-color: #00ffff !important; color: #000 !important; border: 1px solid #000 !important;"></th>
                                 </tr>
                             </thead>
@@ -442,14 +442,11 @@
                                         <td>
                                             <textarea class="form-control-inline inventaris-live-edit" data-field="keterangan" rows="1">{{ $item->keterangan }}</textarea>
                                         </td>
-                                        <td class="text-center">
-                                            <div class="custom-control custom-checkbox">
-                                                <input type="checkbox" class="custom-control-input inventaris-checkbox-edit" id="ceklist-{{ $item->id }}" data-id="{{ $item->id }}" {{ $item->ceklist_perbaikan ? 'checked' : '' }}>
-                                                <label class="custom-control-label" for="ceklist-{{ $item->id }}"></label>
-                                            </div>
+                                        <td>
+                                            <input type="text" class="form-control-inline text-center inventaris-live-edit" data-field="jumlah" value="{{ $item->jumlah }}" placeholder="(Tulis Jumlah)">
                                         </td>
                                         <td class="text-center">
-                                            <input type="date" class="form-control-inline text-center inventaris-live-edit" data-field="tanggal_perbaikan" value="{{ $item->tanggal_perbaikan }}">
+                                            <input type="date" class="form-control-inline text-center inventaris-live-edit" data-field="tanggal_pembelian" value="{{ $item->tanggal_pembelian }}">
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-link text-danger p-0 delete-inventaris-btn" data-id="{{ $item->id }}">
@@ -1065,22 +1062,6 @@
                         timerProgressBar: true
                     });
                     Toast.fire({ icon: 'success', title: 'Tersimpan' });
-                }
-            });
-        });
-
-        $(document).on('change', '.inventaris-checkbox-edit', function() {
-            const checkbox = $(this);
-            const id = checkbox.data('id');
-            const isChecked = checkbox.is(':checked');
-
-            $.ajax({
-                url: "/inventaris-kantor/update/" + id,
-                type: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    _method: "PUT",
-                    ceklist_perbaikan: isChecked
                 }
             });
         });

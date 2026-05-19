@@ -15,7 +15,7 @@
     $nominalVal = $latestSp ? ($latestSp->nominal ?? 0) : 0;
 @endphp
 
-<tr data-id="{{ $item->id }}" style="background-color: {{ $currentConfig['rowBg'] }}; color: {{ $currentConfig['text'] }}; transition: background-color 0.3s ease;">
+<tr data-id="{{ $item->id }}" style="background-color: #ffffff; color: #212529; transition: background-color 0.3s ease;">
     {{-- 1. No --}}
     <td class="text-center" style="vertical-align: middle;">
         {{ isset($data) && method_exists($data, 'firstItem') ? $data->firstItem() + $loop->index : $loop->iteration }}
@@ -32,6 +32,15 @@
                 <span contenteditable="false" class="small text-secondary flex-grow-1" style="font-size:0.85rem; outline:none; border:none;">
                     {{ $item->no_wa }}
                 </span>
+            </div>
+            <!-- Buttons -->
+            <div class="d-flex align-items-center gap-1 mt-1">
+                @if($item->no_wa)
+                    @php $waNumber = preg_replace('/^0/', '62', $item->no_wa); @endphp
+                    <a href="https://wa.me/{{ $waNumber }}" target="_blank" class="btn btn-success btn-sm rounded-circle d-flex align-items-center justify-content-center border-0 shadow-sm" style="width:28px; height:28px;">
+                        <i class="bi bi-whatsapp" style="font-size:0.9rem;"></i>
+                    </a>
+                @endif
             </div>
         </div>
     </td>
@@ -74,32 +83,110 @@
         </div>
     </td>
     
-    {{-- 7. Daftar Prospek (Status Badges) --}}
+    {{-- 7. Potensi Ikut Kelas (Status Badges) --}}
     <td class="text-center" style="vertical-align: middle;">
         @php
             $validSalesplans = $item->salesplan->filter(function($sp) {
                 return $sp->kelas_id != null;
             });
         @endphp
-        @if($validSalesplans->isNotEmpty())
-            <div class="d-flex flex-column justify-content-center p-2">
+        <div class="d-flex flex-column align-items-center justify-content-center p-2" style="gap: 4px;">
+            @if($validSalesplans->isNotEmpty())
                 @foreach($validSalesplans as $sp)
                     @php 
                         $namaKls = $sp->kelas?->nama_kelas ?? '';
                         $shortKls = str_contains($namaKls,'Muslim Indonesia') ? 'M1T' : (str_contains($namaKls,'Muda Indonesia') ? 'Start-Up Muda' : $namaKls);
                         $statusKeySP = strtolower($sp->status);
                         $cfg = $statusConfig[$statusKeySP] ?? $statusConfig['cold'];
+                        $schedule = \App\Models\ZoomSchedule::where('salesplan_id', $sp->id)->first();
                     @endphp
-                    <span class="badge shadow-sm mb-1" style="background:{{ $cfg['bg'] }};color:{{ $cfg['text'] }};font-size:0.75rem;border-radius:8px;padding:6px 12px;border:1px solid #ccc; text-wrap: normal; word-break: break-word;">
-                        {{ $shortKls }}
-                        @if($statusKeySP === 'sudah_transfer') ✓ @endif
-                    </span>
+                    <div class="d-flex align-items-center justify-content-center mb-1" style="gap: 8px;">
+                        <!-- Dedicated Zoom button for this prospect -->
+                        <button type="button" class="btn btn-zoom-bant p-0 d-flex align-items-center justify-content-center border-0 shadow-sm text-white"
+                                style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(45deg, #2D8CFF, #1570E0); transition: all 0.2s;"
+                                data-id="{{ $item->id }}" 
+                                data-nama="{{ $item->nama }}"
+                                data-kelas-nama="{{ $namaKls }}"
+                                data-salesplan-id="{{ $sp->id }}"
+                                data-schedule-date="{{ $schedule ? $schedule->scheduled_at->format('Y-m-d\TH:i') : '' }}"
+                                data-schedule-link="{{ $schedule ? $schedule->zoom_link : '' }}"
+                                data-schedule-status="{{ $schedule ? $schedule->status : '' }}"
+                                data-schedule-notes="{{ $schedule ? $schedule->notes : '' }}"
+                                data-no-wa="{{ $item->no_wa }}"
+                                data-can-edit="{{ $canEdit ? '1' : '0' }}"
+                                data-bant-budget="{{ $item->bant_budget }}"
+                                data-bant-authority="{{ $item->bant_authority }}"
+                                data-bant-time="{{ $item->bant_time }}"
+                                data-ikut-zoom="{{ $item->ikut_zoom }}"
+                                title="Zoom & BANT ({{ $shortKls }})">
+                            <i class="fas fa-video" style="font-size: 0.7rem;"></i>
+                        </button>
+                        
+                        <!-- Follow Up button for this specific class -->
+                        <button type="button" class="btn btn-primary btn-sm btn-riwayat shadow-sm border-0 px-2"
+                                style="height: 24px; line-height: 1; font-size: 0.65rem; font-weight: 700; background: linear-gradient(45deg, #4e73df, #224abe); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;"
+                                data-kelas-nama="{{ $namaKls }}"
+                                data-salesplan-id="{{ $sp->id }}"
+                                data-id="{{ $item->id }}" data-nama="{{ $item->nama }}" 
+                                data-fu1="{{ $sp->fu1_hasil }}"
+                                data-fu1-wa="{{ $sp->fu1_wa ? 1 : 0 }}" data-fu1-telp="{{ $sp->fu1_telp ? 1 : 0 }}"
+                                data-fu1-at="{{ $sp->fu1_at ? ($sp->fu1_at instanceof \Carbon\Carbon ? $sp->fu1_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu1_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu1-hasil="{{ $sp->fu1_hasil }}" data-fu1-tindak-lanjut="{{ $sp->fu1_tindak_lanjut }}"
+                                data-fu2="{{ $sp->fu2_hasil }}"
+                                data-fu2-wa="{{ $sp->fu2_wa ? 1 : 0 }}" data-fu2-telp="{{ $sp->fu2_telp ? 1 : 0 }}"
+                                data-fu2-at="{{ $sp->fu2_at ? ($sp->fu2_at instanceof \Carbon\Carbon ? $sp->fu2_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu2_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu2-hasil="{{ $sp->fu2_hasil }}" data-fu2-tindak-lanjut="{{ $sp->fu2_tindak_lanjut }}"
+                                data-fu3="{{ $sp->fu3_hasil }}"
+                                data-fu3-wa="{{ $sp->fu3_wa ? 1 : 0 }}" data-fu3-telp="{{ $sp->fu3_telp ? 1 : 0 }}"
+                                data-fu3-at="{{ $sp->fu3_at ? ($sp->fu3_at instanceof \Carbon\Carbon ? $sp->fu3_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu3_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu3-hasil="{{ $sp->fu3_hasil }}" data-fu3-tindak-lanjut="{{ $sp->fu3_tindak_lanjut }}"
+                                data-fu4="{{ $sp->fu4_hasil }}"
+                                data-fu4-wa="{{ $sp->fu4_wa ? 1 : 0 }}" data-fu4-telp="{{ $sp->fu4_telp ? 1 : 0 }}"
+                                data-fu4-at="{{ $sp->fu4_at ? ($sp->fu4_at instanceof \Carbon\Carbon ? $sp->fu4_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu4_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu4-hasil="{{ $sp->fu4_hasil }}" data-fu4-tindak-lanjut="{{ $sp->fu4_tindak_lanjut }}"
+                                data-fu5="{{ $sp->fu5_hasil }}"
+                                data-fu5-wa="{{ $sp->fu5_wa ? 1 : 0 }}" data-fu5-telp="{{ $sp->fu5_telp ? 1 : 0 }}"
+                                data-fu5-at="{{ $sp->fu5_at ? ($sp->fu5_at instanceof \Carbon\Carbon ? $sp->fu5_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu5_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu5-hasil="{{ $sp->fu5_hasil }}" data-fu5-tindak-lanjut="{{ $sp->fu5_tindak_lanjut }}"
+                                data-fu6="{{ $sp->fu6_hasil }}"
+                                data-fu6-wa="{{ $sp->fu6_wa ? 1 : 0 }}" data-fu6-telp="{{ $sp->fu6_telp ? 1 : 0 }}"
+                                data-fu6-at="{{ $sp->fu6_at ? ($sp->fu6_at instanceof \Carbon\Carbon ? $sp->fu6_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu6_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu6-hasil="{{ $sp->fu6_hasil }}" data-fu6-tindak-lanjut="{{ $sp->fu6_tindak_lanjut }}"
+                                data-fu7="{{ $sp->fu7_hasil }}"
+                                data-fu7-wa="{{ $sp->fu7_wa ? 1 : 0 }}" data-fu7-telp="{{ $sp->fu7_telp ? 1 : 0 }}"
+                                data-fu7-at="{{ $sp->fu7_at ? ($sp->fu7_at instanceof \Carbon\Carbon ? $sp->fu7_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu7_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu7-hasil="{{ $sp->fu7_hasil }}" data-fu7-tindak-lanjut="{{ $sp->fu7_tindak_lanjut }}"
+                                data-fu8="{{ $sp->fu8_hasil }}"
+                                data-fu8-wa="{{ $sp->fu8_wa ? 1 : 0 }}" data-fu8-telp="{{ $sp->fu8_telp ? 1 : 0 }}"
+                                data-fu8-at="{{ $sp->fu8_at ? ($sp->fu8_at instanceof \Carbon\Carbon ? $sp->fu8_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu8_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu8-hasil="{{ $sp->fu8_hasil }}" data-fu8-tindak-lanjut="{{ $sp->fu8_tindak_lanjut }}"
+                                data-fu9="{{ $sp->fu9_hasil }}"
+                                data-fu9-wa="{{ $sp->fu9_wa ? 1 : 0 }}" data-fu9-telp="{{ $sp->fu9_telp ? 1 : 0 }}"
+                                data-fu9-at="{{ $sp->fu9_at ? ($sp->fu9_at instanceof \Carbon\Carbon ? $sp->fu9_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu9_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu9-hasil="{{ $sp->fu9_hasil }}" data-fu9-tindak-lanjut="{{ $sp->fu9_tindak_lanjut }}"
+                                data-fu10="{{ $sp->fu10_hasil }}" data-fu10-wa="{{ $sp->fu10_wa ? 1 : 0 }}"
+                                data-fu10-telp="{{ $sp->fu10_telp ? 1 : 0 }}"
+                                data-fu10-at="{{ $sp->fu10_at ? ($sp->fu10_at instanceof \Carbon\Carbon ? $sp->fu10_at->format('d/m/Y H:i') : \Carbon\Carbon::parse($sp->fu10_at)->format('d/m/Y H:i')) : '' }}"
+                                data-fu10-hasil="{{ $sp->fu10_hasil }}" data-fu10-tindak-lanjut="{{ $sp->fu10_tindak_lanjut }}">
+                            Follow Up
+                        </button>
+                        <span class="badge shadow-sm" style="background:{{ $cfg['bg'] }};color:{{ $cfg['text'] }};font-size:0.75rem;border-radius:8px;padding:6px 12px;border:1px solid #ccc; text-wrap: normal; word-break: break-word; min-width: 110px;">
+                            {{ $shortKls }}
+                            @if($statusKeySP === 'sudah_transfer') ✓ @endif
+                        </span>
+                    </div>
                 @endforeach
-            </div>
-        @else
-            <span class="text-muted">—</span>
-        @endif
+            @endif
+            
+            <button type="button" class="btn btn-sm btn-success rounded-circle shadow-sm mt-1" 
+                    style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background-color: #28a745; border-color: #28a745; transition: all 0.2s;"
+                    onclick="document.querySelector('.btn-detail-peserta[data-id=\'{{ $item->id }}\']')?.click()"
+                    title="Tambah Prospek">
+                <i class="fas fa-plus" style="font-size: 0.8rem;"></i>
+            </button>
+        </div>
     </td>
+
 
     {{-- 8. CS PIC --}}
     <td class="text-center" style="vertical-align: middle;">
@@ -124,13 +211,14 @@
 
                 $spJson = $item->salesplan->map(function($sp) {
                     return [
+                        'kelas_id' => $sp->kelas_id,
                         'kelas' => $sp->kelas->nama_kelas ?? 'N/A',
                         'status' => $sp->status,
                         'nominal' => $sp->nominal
                     ];
                 })->toJson(JSON_HEX_APOS | JSON_HEX_QUOT);
             @endphp
-            <button type="button" class="btn btn-sm btn-detail-peserta text-white" 
+            <button type="button" class="btn btn-sm btn-detail-peserta text-white d-none" 
                 style="background:#25799E; border-radius:8px; width:100px;" 
                 data-id="{{ $item->id }}" 
                 data-nama="{{ $item->nama }}" 

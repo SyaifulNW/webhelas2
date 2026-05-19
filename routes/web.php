@@ -163,6 +163,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/inventaris-kantor/update/{id}', [\App\Http\Controllers\InventarisKantorController::class, 'update'])->name('inventaris-kantor.update');
     Route::delete('/inventaris-kantor/destroy/{id}', [\App\Http\Controllers\InventarisKantorController::class, 'destroy'])->name('inventaris-kantor.destroy');
 
+    // Zoom scheduling (CS and Admin)
+    Route::post('/zoom-schedule/store', [\App\Http\Controllers\ZoomScheduleController::class, 'store'])->name('zoom-schedule.store');
+    Route::get('/zoom-schedule/calendar', [\App\Http\Controllers\ZoomScheduleController::class, 'calendar'])->name('zoom-schedule.calendar');
+    Route::get('/zoom-schedule/events', [\App\Http\Controllers\ZoomScheduleController::class, 'getEvents'])->name('zoom-schedule.events');
+
     // Admin Group (Prefix & Name 'admin.')
     Route::prefix('admin')->name('admin.')->group(function () {
 
@@ -182,6 +187,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/update-inline', [DataController::class, 'updateInline'])->name('update-inline');
             Route::post('/update-location', [DataController::class, 'updateLocation'])->name('update-location');
             Route::post('/update-status-direct', [DataController::class, 'updateStatusDirect'])->name('update-status-direct');
+            Route::post('/delete-prospect-direct', [DataController::class, 'deleteProspectDirect'])->name('delete-prospect-direct');
             Route::post('/{id}/tambah-salesplan', [DataController::class, 'pindahkesalesplan'])->name('tambahSalesplan');
             Route::post('/{id}/toggle-no-potensi', [DataController::class, 'toggleNoPotensi'])->name('toggleNoPotensi');
             Route::post('/reuse-data', [DataController::class, 'reuseData'])->name('reuse-data');

@@ -153,6 +153,9 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
 
         // [NEW] Capture Absolute Total Database for the current context (CS/Role)
         $totalAbsoluteDatabase = (clone $query)->count();
+        $totalAbsoluteBelumIkut = (clone $query)->whereDoesntHave('salesplan', function($q) {
+            $q->where('status', 'sudah_transfer');
+        })->count();
 
         // Filter Search
         if (!empty($searchFilter)) {
@@ -349,13 +352,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             });
         }
 
-        // Filter Status (Follow-up Status from SalesPlan) - Only for Chapter/Reseller/Agen as requested
-        $statusFilter = $request->input('status');
-        if (!empty($statusFilter) && in_array($userRole, ['chapter', 'reseller', 'agen'])) {
-            $query->whereHas('salesplan', function($q) use ($statusFilter) {
-                $q->where('status', $statusFilter);
-            });
-        }
+        // Filter Status is now applied later after stats calculation to keep counts accurate.
 
 
 
@@ -489,19 +486,88 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $countMauTransfer = $statusCounts['mau_transfer'] ?? 0;
         $countSudahTransfer = $statusCounts['sudah_transfer'] ?? 0;
         $countNo = $statusCounts['no'] ?? 0;
-        $totalFiltered = (clone $query)->count();
+        
+        // totalFiltered depends on filter context:
+        // - Sudah Ikut (1): total sudah transfer (the ones who actually joined)
+        // - Belum Ikut (0): total who haven't transferred yet
+        if ($ikutKelasFilter === '1') {
+            $totalFiltered = $countSudahTransfer;
+        } else {
+            $totalFiltered = (clone $query)->count();
+        }
 
-        // If no ikut_kelas filter, force legend counts to 0 for UI clarity as requested
-        if (empty($ikutKelasFilter) && $ikutKelasFilter !== '0') {
+        // Calculate countCold as all other participants who are not Tertarik, Mau Transfer, Sudah Transfer, or No
+        $activeKelasId = $request->input('daftar_kelas') ?: $request->input('kelas_id');
+        if (!empty($activeKelasId)) {
+            $countCold = $statusCounts['cold'] ?? 0;
+        } else {
+            if ($ikutKelasFilter === '0') {
+                $countCold = max($totalFiltered - $countTertarik - $countMauTransfer - $countNo, 0);
+            } else {
+                $countCold = $statusCounts['cold'] ?? 0;
+            }
+        }
+
+        // If no ikut_kelas filter and no active class filter, force legend counts to 0 for UI clarity as requested
+        $prospekKelasId = $request->input('prospek_kelas_id');
+        if (empty($ikutKelasFilter) && $ikutKelasFilter !== '0' && empty($activeKelasId) && (empty($prospekKelasId) || $prospekKelasId === 'all')) {
             $countTertarik = 0;
             $countMauTransfer = 0;
             $countSudahTransfer = 0;
             $countNo = 0;
+            $countCold = 0;
             $totalFiltered = 0;
+        }
+
+        // Apply Status Filter to main query for pagination (after stats have been calculated)
+        $statusFilter = $request->input('status');
+        if (!empty($statusFilter)) {
+            if (in_array($userRole, ['chapter', 'reseller', 'agen'])) {
+                $query->whereHas('salesplan', function($q) use ($statusFilter) {
+                    $q->where('status', $statusFilter);
+                });
+            } else {
+                // For cs-mbc, administrator, etc.
+                if (!empty($daftarKelasFilter)) {
+                    if ($statusFilter === 'cold') {
+                        $query->where(function($q) use ($daftarKelasFilter) {
+                            $q->whereHas('salesplan', function($sq) use ($daftarKelasFilter) {
+                                $sq->where('kelas_id', $daftarKelasFilter)->where('status', 'cold');
+                            })->orWhereDoesntHave('salesplan', function($sq) use ($daftarKelasFilter) {
+                                $sq->where('kelas_id', $daftarKelasFilter);
+                            });
+                        });
+                    } else {
+                        $query->whereHas('salesplan', function($q) use ($daftarKelasFilter, $statusFilter) {
+                            $q->where('kelas_id', $daftarKelasFilter)->where('status', $statusFilter);
+                        });
+                    }
+                } else {
+                    $query->whereHas('salesplan', function($q) use ($statusFilter) {
+                        $q->where('status', $statusFilter);
+                    });
+                }
+            }
         }
 
         $data = $query->paginate($perPage)->withQueryString();
         $kelas = \App\Models\Kelas::select('id', 'nama_kelas', 'tanggal_selesai')->orderBy('nama_kelas')->get();
+
+        // Calculate Jumlah Potensi (only show if status filter is active or class filter is active, otherwise default to 0)
+        $prospekKelasId = $request->input('prospek_kelas_id');
+        if (empty($ikutKelasFilter) && $ikutKelasFilter !== '0' && empty($activeKelasId) && (empty($prospekKelasId) || $prospekKelasId === 'all')) {
+            $jumlahPotensi = 0;
+        } else {
+            $jumlahPotensiQuery = \App\Models\SalesPlan::whereIn('data_id', $dataFilteredIds)
+                ->whereIn('status', ['cold', 'tertarik', 'mau_transfer']);
+                
+            if (!empty($activeKelasId)) {
+                $jumlahPotensiQuery->where('kelas_id', $activeKelasId);
+            }
+            
+            $jumlahPotensi = $jumlahPotensiQuery->count();
+        }
+
 
         // Fetch lists for filters
         $provinsiList = \App\Models\Data::select('provinsi_nama')
@@ -547,10 +613,12 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                     'countMauTransfer' => $countMauTransfer,
                     'countSudahTransfer' => $countSudahTransfer,
                     'countNo' => $countNo,
+                    'countCold' => $countCold,
                     'kurang' => $kurang,
                     'bulanLabel' => $bulanLabel,
                     'prospekCounts' => $prospekCounts,
                     'totalProspek' => $totalProspek,
+                    'jumlahPotensi' => $jumlahPotensi,
                 ]
             ]);
         }
@@ -562,18 +630,21 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             'provinsiList' => $provinsiList,
             'kotaList' => $kotaList,
             'databaseBaru' => $databaseBaru,
-            'totalDatabase' => $totalAbsoluteDatabase, // Use absolute total here
+            'totalDatabase' => $totalAbsoluteDatabase,
             'totalFiltered' => $totalFiltered,
             'countTertarik' => $countTertarik,
             'countMauTransfer' => $countMauTransfer,
             'countSudahTransfer' => $countSudahTransfer,
             'countNo' => $countNo,
+            'countCold' => $countCold,
             'target' => $target,
             'kurang' => $kurang,
             'bulanLabel' => $bulanLabel,
             'prospekCounts' => $prospekCounts,
             'totalProspek' => $totalProspek,
+            'jumlahPotensi' => $jumlahPotensi,
         ]);
+
     }
 
 
@@ -602,7 +673,13 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         public function updateInline(Request $request)
         {
             try {
-                $data = Data::findOrFail($request->id);
+                $salesplanId = $request->input('salesplan_id');
+                $targetModel = null;
+                if (!empty($salesplanId)) {
+                    $targetModel = \App\Models\SalesPlan::findOrFail($salesplanId);
+                } else {
+                    $targetModel = Data::findOrFail($request->id);
+                }
                 
                 if ($request->has('updates')) {
                     $updates = $request->updates;
@@ -619,15 +696,15 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
 
                         // Compare with current data (normalize null/empty string)
                         $newHasil = $updates[$hasilField] ?? '';
-                        $oldHasil = $data->$hasilField ?? '';
+                        $oldHasil = $targetModel->$hasilField ?? '';
                         if ($newHasil !== $oldHasil) $hasChanged = true;
 
                         $newTindak = $updates[$tindakField] ?? '';
-                        $oldTindak = $data->$tindakField ?? '';
+                        $oldTindak = $targetModel->$tindakField ?? '';
                         if ($newTindak !== $oldTindak) $hasChanged = true;
 
-                        if (isset($updates[$waField]) && (int)$updates[$waField] !== (int)$data->$waField) $hasChanged = true;
-                        if (isset($updates[$telpField]) && (int)$updates[$telpField] !== (int)$data->$telpField) $hasChanged = true;
+                        if (isset($updates[$waField]) && (int)$updates[$waField] !== (int)$targetModel->$waField) $hasChanged = true;
+                        if (isset($updates[$telpField]) && (int)$updates[$telpField] !== (int)$targetModel->$telpField) $hasChanged = true;
 
                         // If manual timestamp is provided, parse it
                         $manualDate = null;
@@ -638,7 +715,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                         }
 
                         // Check if it's actually changed from current database value (ignore seconds)
-                        $currentDate = $data->$atField ? \Carbon\Carbon::parse($data->$atField) : null;
+                        $currentDate = $targetModel->$atField ? \Carbon\Carbon::parse($targetModel->$atField) : null;
                         $isDateManuallyChanged = false;
                         if ($manualDate) {
                             if (!$currentDate || $manualDate->format('d/m/Y H:i') !== $currentDate->format('d/m/Y H:i')) {
@@ -656,16 +733,16 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                         }
                     }
                     
-                    $data->update($updates);
-                    $data->refresh(); // Ensure we have the updated timestamps
+                    $targetModel->update($updates);
+                    $targetModel->refresh(); // Ensure we have the updated timestamps
 
                     // Recalculate Daily Activity for all affected dates
                     try {
                         $affectedDates = [];
                         for ($i = 1; $i <= 10; $i++) {
                             $atField = "fu{$i}_at";
-                            if ($data->$atField && $data->$atField instanceof \Carbon\Carbon) {
-                                $affectedDates[] = $data->$atField->toDateString();
+                            if ($targetModel->$atField && $targetModel->$atField instanceof \Carbon\Carbon) {
+                                $affectedDates[] = $targetModel->$atField->toDateString();
                             }
                         }
                         // Also include today's date just in case
@@ -683,10 +760,11 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                     $timestamps = [];
                     for ($i = 1; $i <= 10; $i++) {
                         $field = "fu{$i}_at";
-                        $timestamps[$field] = $data->$field ? $data->$field->format('d/m/Y H:i') : null;
+                        $timestamps[$field] = $targetModel->$field ? $targetModel->$field->format('d/m/Y H:i') : null;
                     }
                     return response()->json(['success' => true, 'timestamps' => $timestamps]);
                 } else {
+                    $data = Data::findOrFail($request->id);
                     $field = $request->field;
                     if ($field) {
                         // Normalize field name (some parts of the app use jenisbisnis)
@@ -703,6 +781,24 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                         // Direct assignment and save to bypass mass-assignment issues if any
                         $data->$field = $request->value;
                         $data->save();
+
+                        // If class is being changed, ensure a SalesPlan exists for this new class
+                        if ($field === 'kelas_id' && !empty($request->value)) {
+                            $kelasId = $request->value;
+                            $exists = \App\Models\SalesPlan::where('data_id', $data->id)
+                                ->where('kelas_id', $kelasId)
+                                ->exists();
+                            if (!$exists) {
+                                $plan = new \App\Models\SalesPlan();
+                                $plan->data_id = $data->id;
+                                $plan->kelas_id = $kelasId;
+                                $plan->nama = $data->nama;
+                                $plan->created_by = auth()->id();
+                                $plan->status = 'cold';
+                                $plan->level = 'Grow Up';
+                                $plan->save();
+                            }
+                        }
                         
                         // Debug log to confirm reaching this point
                         \Log::info("Update successful", ['id' => $data->id, 'field' => $field, 'value' => $request->value]);
@@ -1005,7 +1101,7 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             $userRole = strtolower(auth()->user()->role);
             
             // Assume default class if none set
-            $kelasId = $data->kelas_id;
+            $kelasId = $request->input('kelas_id') ?: $data->kelas_id;
             
             // For Chapter/Reseller, strictly use M1T
             if (in_array($userRole, ['chapter', 'reseller'])) {
@@ -1018,17 +1114,10 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             }
 
             // Create or Update SalesPlan
-            // Find existing plan for this data
-            // We prioritize the plan that matches the current kelas_id
+            // Find existing plan for this data strictly matching the selected kelas_id
             $plan = SalesPlan::where('data_id', $dataId)
                 ->where('kelas_id', $kelasId)
                 ->first();
-
-            // If no plan matches this kelas_id, try to find ANY plan for this data to update it
-            // (Avoiding duplicate plans for the same person when they just change classes)
-            if (!$plan) {
-                $plan = SalesPlan::where('data_id', $dataId)->orderBy('updated_at', 'desc')->first();
-            }
 
             if (!$plan) {
                 $plan = new SalesPlan();
@@ -1037,9 +1126,6 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
                 $plan->nama = $data->nama;
                 $plan->created_by = auth()->id();
                 $plan->level = 'Grow Up';
-            } else {
-                // If we found an existing plan but it has a different kelas_id, update it
-                $plan->kelas_id = $kelasId;
             }
 
             // If we are setting this plan to 'sudah_transfer', ensure other plans for this data_id 
@@ -1084,6 +1170,35 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             }
 
             return response()->json(['success' => true, 'plan_id' => $plan->id]);
+        }
+
+        /**
+         * Delete prospect directly from database view
+         */
+        public function deleteProspectDirect(Request $request)
+        {
+            $dataId = $request->data_id;
+            $kelasId = $request->kelas_id;
+
+            $deleted = SalesPlan::where('data_id', $dataId)
+                ->where('kelas_id', $kelasId)
+                ->delete();
+
+            if ($deleted) {
+                // If candidate has no more prospects left, reset status back to peserta_baru
+                $remainingPlansCount = SalesPlan::where('data_id', $dataId)->count();
+                if ($remainingPlansCount === 0) {
+                    $data = Data::find($dataId);
+                    if ($data) {
+                        $data->status_peserta = 'peserta_baru';
+                        $data->kelas_id = null;
+                        $data->save();
+                    }
+                }
+                return response()->json(['success' => true]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Prospek tidak ditemukan.']);
         }
         public function getStatistik(Request $request)
         {

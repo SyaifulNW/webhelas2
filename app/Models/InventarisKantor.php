@@ -14,7 +14,7 @@ class InventarisKantor extends Model
         'nama_peralatan', 
         'status', 
         'keterangan', 
-        'ceklist_perbaikan', 
-        'tanggal_perbaikan'
+        'jumlah', 
+        'tanggal_pembelian'
     ];
 }
