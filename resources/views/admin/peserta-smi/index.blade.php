@@ -130,7 +130,7 @@
                 /* Soft blue on hover */
             }
 
-            /* 📌 Sticky Header & Single Scroll Logic */
+            /* ðŸ“Œ Sticky Header & Single Scroll Logic */
             .sticky-header-top {
                 position: sticky !important;
                 top: 85px !important; /* Offset for SB-Admin-2 topbar + marquee height */
@@ -235,6 +235,60 @@
             .participant-2-hidden {
                 display: none;
             }
+
+            /* Input Styling in Table for Inline Editing */
+            .table-input {
+                border: 1px solid transparent;
+                border-radius: 4px;
+                padding: 4px 6px;
+                transition: all 0.2s;
+                background: transparent;
+                color: #2d2d2d;
+                width: 100%;
+                font-weight: 500;
+            }
+            .table-input:hover {
+                background: #f8f9fc;
+                border-color: #d1d3e2;
+                cursor: pointer;
+            }
+            .table-input:focus {
+                background: #fff;
+                border-color: #4e73df;
+                border-width: 2px !important;
+                box-shadow: 0 0 0 0.15rem rgba(78, 115, 223, 0.25);
+            }
+            .active-stat-row {
+                background-color: rgba(78, 115, 223, 0.08) !important;
+                border-left: 4px solid #4e73df !important;
+            }
+            .active-stat-row td {
+                font-weight: 700 !important;
+                color: #2e59d9 !important;
+            }
+            .stat-table {
+                border-collapse: collapse !important;
+                border: 1px solid #000000 !important;
+            }
+            .stat-table th, .stat-table td {
+                padding: 6px 12px !important;
+                vertical-align: middle !important;
+                font-size: 0.82rem;
+                border: 1px solid #000000 !important;
+            }
+            .stat-card .card-header {
+                padding: 6px 16px !important;
+            }
+            .stat-card .card-header h6 {
+                font-size: 0.88rem !important;
+            }
+            .stat-table thead th {
+                padding-top: 6px !important;
+                padding-bottom: 6px !important;
+                font-size: 0.68rem !important;
+                border: 1px solid #000000 !important;
+                border-bottom: 2px solid #000000 !important;
+            }
         </style>
 
         <style>
@@ -271,6 +325,9 @@
                 font-size: 0.85rem;
                 font-weight: 700;
             }
+            .stat-card-premium {
+                transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, border-width 0.2s ease;
+            }
             .stat-card-premium .card-body {
                 padding: 0.75rem !important;
             }
@@ -302,89 +359,222 @@
             }
         </style>
 
-        <!-- Card Stats Section -->
+        <!-- Filter Card Section (At the Very Top) -->
         <div class="col-12 mb-3">
-            <div class="row flex-nowrap" style="margin-left: -6px; margin-right: -6px;">
-                <div class="col-stat-7 mb-2">
-                    <div class="card stat-card-premium bg-gradient-blue text-white shadow-sm h-100">
-                        <div class="card-body position-relative">
-                            <div class="stat-label-mini mb-1">Total Peserta</div>
-                            <div class="stat-value-main font-weight-bold" id="stat-total">{{ number_format($stats['total']) }}</div>
-                            <i class="fas fa-users stat-icon-bg"></i>
+            <div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header py-2 d-flex flex-row align-items-center justify-content-start bg-primary text-white" style="gap: 20px;">
+                    <div class="d-flex align-items-center mr-2">
+                        <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-filter mr-2"></i>Filter Pencarian</h6>
+                    </div>
+                    <div class="d-flex align-items-end flex-wrap p-2 rounded w-100" style="gap: 10px; background: rgba(255,255,255,0.07);">
+                        {{-- Chapter, CS Pusat & Status Peserta filters removed per user request --}}
+                        {{-- Hidden inputs to keep filter values for backend if needed --}}
+                        @if(strtolower(auth()->user()->role) === 'administrator' || in_array(auth()->user()->name, ['Linda', 'Yasmin']))
+                        <input type="hidden" form="sppFilterForm" name="filter_chapter" id="smi_filter_chapter" value="{{ request('filter_chapter', 'all') }}">
+                        <input type="hidden" form="sppFilterForm" name="filter_cs_pusat" id="smi_filter_cs_pusat" value="{{ request('filter_cs_pusat', 'all') }}">
+                        @endif
+                        <input type="hidden" form="sppFilterForm" name="filter_status" id="smi_filter_status" value="{{ request('filter_status', 'all') }}">
+
+                        {{-- Approval Filter --}}
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">APPROVE STATUS</label>
+                            <select form="sppFilterForm" name="filter_approval" id="smi_filter_approval" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 110px;">
+                                <option value="all" {{ request('filter_approval', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
+                                <option value="Pending" {{ request('filter_approval') == 'Pending' ? 'selected' : '' }}>PENDING</option>
+                                <option value="Approved" {{ request('filter_approval') == 'Approved' ? 'selected' : '' }}>APPROVED</option>
+                                <option value="Rejected" {{ request('filter_approval') == 'Rejected' ? 'selected' : '' }}>REJECTED</option>
+                            </select>
+                        </div>
+
+                        {{-- SPP Bulan --}}
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">PEMBAYARAN SPP</label>
+                            <select form="sppFilterForm" name="filter_spp_month" id="smi_filter_spp_month" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 110px; font-size: 0.75rem; height: 30px;">
+                                <option value="all" {{ request('filter_spp_month') == 'all' ? 'selected' : '' }}>ALL</option>
+                                @foreach($monthsRaw as $key => $val)
+                                    <option value="{{ $key }}" {{ request('filter_spp_month', date('n')) == $key ? 'selected' : '' }}>{{ $val }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- SPP Status --}}
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">STATUS SPP</label>
+                            <select form="sppFilterForm" name="filter_spp_status" id="smi_filter_spp_status" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 125px; font-size: 0.75rem; height: 30px;">
+                                <option value="all" {{ request('filter_spp_status', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
+                                <option value="1" {{ request('filter_spp_status') === '1' ? 'selected' : '' }}>Lunas</option>
+                                <option value="0" {{ request('filter_spp_status') === '0' ? 'selected' : '' }}>Belum</option>
+                                <option value="blue" {{ request('filter_spp_status') === 'blue' ? 'selected' : '' }}>Closing Baru</option>
+                                <option value="total_month" {{ request('filter_spp_status') === 'total_month' ? 'selected' : '' }}>Total Keseluruhan</option>
+                            </select>
+                        </div>
+
+                        {{-- Tahun --}}
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">TAHUN</label>
+                            <select form="sppFilterForm" name="filter_year" id="smi_filter_year" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 80px; font-size: 0.75rem; height: 30px;">
+                                <option value="all" {{ request('filter_year', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
+                                @for($y = date('Y') + 1; $y >= 2024; $y--)
+                                    <option value="{{ $y }}" {{ request('filter_year', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+
+                        {{-- Level Filter (Linda Only) --}}
+                        @if(auth()->user()->name === 'Linda')
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">LEVEL</label>
+                            <select form="sppFilterForm" name="filter_level" id="smi_filter_level" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="width: 110px; font-size: 0.75rem; height: 30px;">
+                                <option value="all" {{ request('filter_level', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
+                                <option value="Grow Up" {{ request('filter_level') == 'Grow Up' ? 'selected' : '' }}>GROW UP</option>
+                                <option value="Start Up" {{ request('filter_level') == 'Start Up' ? 'selected' : '' }}>START UP</option>
+                            </select>
+                        </div>
+                        @endif
+
+                        <a href="javascript:void(0)" onclick="resetSmiFilters()" class="text-white ml-1 mb-1" title="Reset Filter">
+                            <i class="fas fa-sync-alt"></i>
+                        </a>
+
+                        {{-- Vertical Divider --}}
+                        <div class="mx-1" style="width: 1px; height: 30px; background: rgba(255,255,255,0.2);"></div>
+
+                        {{-- Search Block --}}
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CARI NAMA</label>
+                            <input type="text" name="search" id="smi_search" class="form-control form-control-sm border-0 bg-light" style="width: 150px; height: 30px; border-radius: 5px; font-size: 0.75rem;" placeholder="Cari nama..." value="{{ request('search') }}">
+                        </div>
+                        <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm px-3" onclick="updateSmiFilters()" style="height: 30px; border-radius: 5px; font-size: 0.7rem; color: #2e59d9;">
+                            <i class="fas fa-search mr-1"></i> TAMPILKAN DATA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Stats Section (Reorganized into 2 Tables) -->
+        <div class="col-12 mb-3">
+            <div class="row">
+                <!-- Table 1: Membership Stats -->
+                <div class="col-lg-5 mb-3">
+                    <div class="card stat-card shadow-sm border-0 h-100" style="border-radius: 12px; overflow: hidden;">
+                        <div class="card-header bg-gradient-primary text-white py-2 px-3 border-0 d-flex align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-users mr-2"></i>Statistik Keanggotaan</h6>
+                        </div>
+                        <div class="table-responsive h-100">
+                            <table class="table table-bordered stat-table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                <thead class="bg-light text-uppercase" style="font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px;">
+                                    <tr>
+                                        <th class="pl-3">Status Peserta</th>
+                                        <th class="text-center" style="width: 120px;">Jumlah</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr id="row-stat-all" onclick="filterByStat && filterByStat('all')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-users text-primary mr-2" style="width: 16px;"></i>Total Peserta
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-primary font-weight-bold px-2.5 py-1" id="stat-total" style="font-size: 0.85rem; border-radius: 4px;">{{ number_format($stats['total']) }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-aktif" onclick="filterByStat && filterByStat('aktif')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-user-check text-success mr-2" style="width: 16px;"></i>Peserta Aktif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-success font-weight-bold px-2.5 py-1" id="stat-aktif" style="font-size: 0.85rem; border-radius: 4px;">{{ number_format($stats['aktif']) }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-cuti" onclick="filterByStat && filterByStat('cuti')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-user-slash text-danger mr-2" style="width: 16px;"></i>Peserta Cuti
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-danger font-weight-bold px-2.5 py-1" id="stat-cuti" style="font-size: 0.85rem; border-radius: 4px;">{{ number_format($stats['cuti']) }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-lunas" onclick="filterByStat && filterByStat('lunas')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-check-double text-info mr-2" style="width: 16px;"></i>Peserta Lunas
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-info font-weight-bold px-2.5 py-1" id="stat-lunas" style="font-size: 0.85rem; border-radius: 4px;">{{ number_format($stats['lunas'] ?? 0) }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-stat-7 mb-2">
-                    <div class="card stat-card-premium bg-gradient-green text-white shadow-sm h-100">
-                        <div class="card-body position-relative">
-                            <div class="stat-label-mini mb-1">Peserta Aktif</div>
-                            <div class="stat-value-main font-weight-bold" id="stat-aktif">{{ number_format($stats['aktif']) }}</div>
-                            <i class="fas fa-user-check stat-icon-bg"></i>
+                <!-- Table 2: Financial Stats -->
+                @php
+                    $monthName = $stats['filter_month_name'] ?? '';
+                @endphp
+                <div class="col-lg-7 mb-3">
+                    <div class="card stat-card shadow-sm border-0 h-100" style="border-radius: 12px; overflow: hidden;">
+                        <div class="card-header bg-gradient-info text-white py-2 px-3 border-0 d-flex align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-white">
+                                <i class="fas fa-wallet mr-2"></i>Keuangan Keanggotaan
+                            </h6>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-stat-7 mb-2">
-                    <div class="card stat-card-premium bg-gradient-red text-white shadow-sm h-100">
-                        <div class="card-body position-relative">
-                            <div class="stat-label-mini mb-1">Peserta Cuti</div>
-                            <div class="stat-value-main font-weight-bold" id="stat-cuti">{{ number_format($stats['cuti']) }}</div>
-                            <i class="fas fa-user-slash stat-icon-bg"></i>
-                        </div>
-                    </div>
-                </div>
-
-        @php
-            $isMonthFilter = ($stats['is_month_filter'] ?? false);
-            $monthName = $stats['filter_month_name'] ?? '';
-        @endphp
-
-                <!-- MONTHLY CARDS -->
-                <div class="col-stat-7 mb-2 stat-month-only {{ $isMonthFilter ? '' : 'd-none' }}">
-                    <div class="card stat-card-premium shadow-sm h-100 border-bottom-primary" style="background: #fff; border-left: 4px solid #4e73df;">
-                        <div class="card-body">
-                            <div class="stat-label-mini text-primary mb-1">Closing (Blue) <span class="stat-month-label">{{ $monthName }}</span></div>
-                            <div class="d-flex align-items-baseline">
-                                <div class="stat-value-main font-weight-bold text-gray-800 mr-2" id="stat-count-closing">{{ number_format($stats['count_closing'] ?? 0) }}</div>
-                                <div class="stat-value-sub text-primary" id="stat-nom-closing">Rp {{ number_format($stats['nominal_closing'] ?? 0, 0, ',', '.') }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-stat-7 mb-2 stat-month-only {{ $isMonthFilter ? '' : 'd-none' }}">
-                    <div class="card stat-card-premium shadow-sm h-100 border-bottom-success" style="background: #fff; border-left: 4px solid #1cc88a;">
-                        <div class="card-body">
-                            <div class="stat-label-mini text-success mb-1">Sudah Bayar <span class="stat-month-label">{{ $monthName }}</span></div>
-                            <div class="d-flex align-items-baseline">
-                                <div class="stat-value-main font-weight-bold text-gray-800 mr-2" id="stat-count-spp">{{ number_format($stats['count_spp'] ?? 0) }}</div>
-                                <div class="stat-value-sub text-success" id="stat-nom-spp">Rp {{ number_format($stats['nominal_spp'] ?? 0, 0, ',', '.') }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-stat-7 mb-2 stat-month-only {{ $isMonthFilter ? '' : 'd-none' }}">
-                    <div class="card stat-card-premium shadow-sm h-100 border-bottom-warning" style="background: #fff; border-left: 4px solid #f6c23e;">
-                        <div class="card-body">
-                            <div class="stat-label-mini text-warning mb-1">Blm Bayar (Potensi) <span class="stat-month-label">{{ $monthName }}</span></div>
-                            <div class="d-flex align-items-baseline">
-                                <div class="stat-value-main font-weight-bold text-gray-800 mr-2" id="stat-count-belum">{{ number_format($stats['count_belum'] ?? 0) }}</div>
-                                <div class="stat-value-sub text-warning" id="stat-nom-belum">Rp {{ number_format($stats['nominal_belum'] ?? 0, 0, ',', '.') }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-stat-7 mb-2 stat-month-only {{ $isMonthFilter ? '' : 'd-none' }}">
-                    <div class="card stat-card-premium shadow-sm h-100 border-bottom-info" style="background: #fff; border-left: 4px solid #36b9cc;">
-                        <div class="card-body">
-                            <div class="stat-label-mini text-info mb-1">Total Keseluruhan <span class="stat-month-label">{{ $monthName }}</span></div>
-                            <div class="d-flex align-items-baseline">
-                                <div class="stat-value-main font-weight-bold text-gray-800 mr-2" id="stat-count-total-month">{{ number_format(($stats['count_spp'] ?? 0) + ($stats['count_belum'] ?? 0)) }}</div>
-                                <div class="stat-value-sub text-info" id="stat-nom-total-month">Rp {{ number_format(($stats['nominal_spp'] ?? 0) + ($stats['nominal_belum'] ?? 0), 0, ',', '.') }}</div>
-                            </div>
+                        <div class="table-responsive h-100">
+                            <table class="table table-bordered stat-table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                <thead class="bg-light text-uppercase" style="font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px;">
+                                    <tr>
+                                        <th class="pl-3">Kategori</th>
+                                        <th class="text-center" style="width: 100px;">Jumlah</th>
+                                        <th class="text-right pr-3" style="width: 160px;">Nominal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr id="row-stat-closing" onclick="filterByStat && filterByStat('closing')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-check-double text-primary mr-2" style="width: 16px;"></i>Closing Baru <span class="stat-month-label text-muted font-weight-normal" style="font-size: 0.75rem;">{{ $monthName }}</span>
+                                        </td>
+                                        <td class="text-center font-weight-bold text-gray-800" id="stat-count-closing">
+                                            {{ number_format($stats['count_closing'] ?? 0) }}
+                                        </td>
+                                        <td class="text-right pr-3 font-weight-bold text-primary" id="stat-nom-closing" style="font-size: 0.9rem;">
+                                            Rp {{ number_format($stats['nominal_closing'] ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-sudah_bayar" onclick="filterByStat && filterByStat('sudah_bayar')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-check-circle text-success mr-2" style="width: 16px;"></i>Peserta Lama yang sudah bayar SPP bulan (<span class="stat-month-label text-muted font-weight-normal" style="font-size: 0.75rem;">{{ $monthName }}</span>)
+                                        </td>
+                                        <td class="text-center font-weight-bold text-gray-800" id="stat-count-spp">
+                                            {{ number_format($stats['count_spp'] ?? 0) }}
+                                        </td>
+                                        <td class="text-right pr-3 font-weight-bold text-success" id="stat-nom-spp" style="font-size: 0.9rem;">
+                                            Rp {{ number_format($stats['nominal_spp'] ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-belum_bayar" onclick="filterByStat && filterByStat('belum_bayar')" style="cursor: pointer;">
+                                        <td class="pl-3 font-weight-bold text-gray-800">
+                                            <i class="fas fa-exclamation-circle text-warning mr-2" style="width: 16px;"></i>Jumlah Potensi (Belum Bayar) <span class="stat-month-label text-muted font-weight-normal" style="font-size: 0.75rem;">{{ $monthName }}</span>
+                                        </td>
+                                        <td class="text-center font-weight-bold text-gray-800" id="stat-count-belum">
+                                            {{ number_format($stats['count_belum'] ?? 0) }}
+                                        </td>
+                                        <td class="text-right pr-3 font-weight-bold text-warning" id="stat-nom-belum" style="font-size: 0.9rem;">
+                                            Rp {{ number_format($stats['nominal_belum'] ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    <tr id="row-stat-total_month" onclick="filterByStat && filterByStat('total_month')" style="cursor: pointer; background-color: rgba(54, 185, 204, 0.05);">
+                                        <td class="pl-3 font-weight-bold text-gray-900">
+                                            <i class="fas fa-calculator text-info mr-2" style="width: 16px;"></i>Total Keseluruhan <span class="stat-month-label text-muted font-weight-normal" style="font-size: 0.75rem;">{{ $monthName }}</span>
+                                        </td>
+                                        <td class="text-center font-weight-bold text-gray-900" id="stat-count-total-month">
+                                            {{ number_format(($stats['count_closing'] ?? 0) + ($stats['count_spp'] ?? 0) + ($stats['count_belum'] ?? 0)) }}
+                                        </td>
+                                        <td class="text-right pr-3 font-weight-bold text-info" id="stat-nom-total-month" style="font-size: 0.95rem;">
+                                            Rp {{ number_format(($stats['nominal_closing'] ?? 0) + ($stats['nominal_spp'] ?? 0) + ($stats['nominal_belum'] ?? 0), 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -414,130 +604,11 @@
             </div>
         </div>
 
-        <div class="col-xl-12 col-md-12 mb-3">
-            <h5 class="m-0 font-weight-bold text-primary"><i class="fas fa-list-alt mr-2"></i>Daftar Peserta M1T</h5>
-        </div>
-
         <div class="col-xl-12 col-md-12 mb-4">
             <div class="card shadow mb-4">
-                <div
-                    class="card-header py-2 d-flex flex-row align-items-center justify-content-start bg-primary text-white sticky-header-top" style="gap: 20px;">
-
-
-                    <div class="d-flex align-items-end flex-wrap p-2 rounded w-100" style="gap: 10px; background: rgba(255,255,255,0.07);">
-                        {{-- Chapter Filter --}}
-                        @if(strtolower(auth()->user()->role) === 'administrator' || in_array(auth()->user()->name, ['Linda', 'Yasmin']))
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CHAPTER</label>
-                            <select form="sppFilterForm" name="filter_chapter" id="smi_filter_chapter" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 100px;">
-                                <option value="all" {{ request('filter_chapter', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                <option value="Cirebon" {{ request('filter_chapter') == 'Cirebon' ? 'selected' : '' }}>CIREBON </option>
-                                <option value="Kaltim" {{ request('filter_chapter') == 'Kaltim' ? 'selected' : '' }}>KALTIM</option>
-                                <option value="Depok" {{ request('filter_chapter') == 'Depok' ? 'selected' : '' }}>DEPOK</option>
-                                <option value="Jakarta" {{ request('filter_chapter') == 'Jakarta' ? 'selected' : '' }}>JAKARTA</option>
-                                <option value="Tangerang" {{ request('filter_chapter') == 'Tangerang' ? 'selected' : '' }}>TANGERANG</option>
-                                <option value="Makassar" {{ request('filter_chapter') == 'Makassar' ? 'selected' : '' }}>MAKASSAR</option>
-                                <option value="Lampung" {{ request('filter_chapter') == 'Lampung' ? 'selected' : '' }}>LAMPUNG</option>
-                            </select>
-                        </div>
-
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CS PUSAT</label>
-                            <select form="sppFilterForm" name="filter_cs_pusat" id="smi_filter_cs_pusat" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 100px;">
-                                <option value="all" {{ request('filter_cs_pusat', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                @foreach($listCs as $csName)
-                                    <option value="{{ $csName }}" {{ request('filter_cs_pusat') == $csName ? 'selected' : '' }}>{{ $csName }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @endif
-
-                        {{-- Status Filter --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">STATUS PESERTA</label>
-                            <select form="sppFilterForm" name="filter_status" id="smi_filter_status" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 90px;">
-                                <option value="all" {{ request('filter_status', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                <option value="Aktif" {{ request('filter_status') == 'Aktif' ? 'selected' : '' }}>AKTIF</option>
-                                <option value="Cuti" {{ request('filter_status') == 'Cuti' ? 'selected' : '' }}>CUTI</option>
-                                <option value="Lulus" {{ request('filter_status') == 'Lulus' ? 'selected' : '' }}>LULUS</option>
-                            </select>
-                        </div>
-
-                        {{-- Approval Filter --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">APPROVE STATUS</label>
-                            <select form="sppFilterForm" name="filter_approval" id="smi_filter_approval" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="font-size: 0.75rem; height: 30px; width: 110px;">
-                                <option value="all" {{ request('filter_approval', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                <option value="Pending" {{ request('filter_approval') == 'Pending' ? 'selected' : '' }}>PENDING</option>
-                                <option value="Approved" {{ request('filter_approval') == 'Approved' ? 'selected' : '' }}>APPROVED</option>
-                                <option value="Rejected" {{ request('filter_approval') == 'Rejected' ? 'selected' : '' }}>REJECTED</option>
-                            </select>
-                        </div>
-
-                        {{-- SPP Bulan --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">PEMBAYARAN SPP</label>
-                            <select form="sppFilterForm" name="filter_spp_month" id="smi_filter_spp_month" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 110px; font-size: 0.75rem; height: 30px;">
-                                <option value="all" {{ request('filter_spp_month') == 'all' ? 'selected' : '' }}>ALL</option>
-                                @foreach($monthsRaw as $key => $val)
-                                    <option value="{{ $key }}" {{ request('filter_spp_month', date('n')) == $key ? 'selected' : '' }}>{{ $val }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- SPP Status --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">STATUS SPP</label>
-                            <select form="sppFilterForm" name="filter_spp_status" id="smi_filter_spp_status" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 100px; font-size: 0.75rem; height: 30px;">
-                                <option value="all" {{ request('filter_spp_status', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                <option value="1" {{ request('filter_spp_status') === '1' ? 'selected' : '' }}>Lunas</option>
-                                <option value="0" {{ request('filter_spp_status') === '0' ? 'selected' : '' }}>Belum</option>
-                            </select>
-                        </div>
-
-                        {{-- Tahun --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">TAHUN</label>
-                            <select form="sppFilterForm" name="filter_year" id="smi_filter_year" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light" style="width: 80px; font-size: 0.75rem; height: 30px;">
-                                <option value="all" {{ request('filter_year', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                @for($y = date('Y') + 1; $y >= 2024; $y--)
-                                    <option value="{{ $y }}" {{ request('filter_year', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
-                                @endfor
-                            </select>
-                        </div>
-
-                        {{-- Level Filter (Linda Only) --}}
-                        @if(auth()->user()->name === 'Linda')
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">LEVEL</label>
-                            <select form="sppFilterForm" name="filter_level" id="smi_filter_level" onchange="updateSmiFilters()" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold" style="width: 110px; font-size: 0.75rem; height: 30px;">
-                                <option value="all" {{ request('filter_level', 'all') == 'all' ? 'selected' : '' }}>ALL</option>
-                                <option value="Grow Up" {{ request('filter_level') == 'Grow Up' ? 'selected' : '' }}>GROW UP</option>
-                                <option value="Start Up" {{ request('filter_level') == 'Start Up' ? 'selected' : '' }}>START UP</option>
-                            </select>
-                        </div>
-                        @endif
-
-
-                        <a href="javascript:void(0)" onclick="resetSmiFilters()" class="text-white ml-1 mb-1" title="Reset Filter">
-                            <i class="fas fa-sync-alt"></i>
-                        </a>
-
-                        {{-- Vertical Divider --}}
-                        <div class="mx-1" style="width: 1px; height: 30px; background: rgba(255,255,255,0.2);"></div>
-
-                        {{-- Search Block --}}
-                        <div class="d-flex flex-column" style="gap: 2px;">
-                            <label class="mb-0 text-white font-weight-bold" style="font-size: 0.65rem; margin-left: 2px; letter-spacing: 0.5px;">CARI NAMA</label>
-                            <input type="text" name="search" id="smi_search" class="form-control form-control-sm border-0 bg-light" style="width: 150px; height: 30px; border-radius: 5px; font-size: 0.75rem;" placeholder="Cari nama..." value="{{ request('search') }}">
-                        </div>
-                        <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm px-3" onclick="updateSmiFilters()" style="height: 30px; border-radius: 5px; font-size: 0.7rem; color: #2e59d9;">
-                            <i class="fas fa-search mr-1"></i> TAMPILKAN DATA
-                        </button>
-                    </div>
+                <div class="card-header py-2 d-flex align-items-center bg-primary text-white sticky-header-top">
+                    <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-list-alt mr-2"></i>Daftar Peserta M1T</h6>
                 </div>
-                </div>
-
                 <div class="card-body p-0">
 
                     <div class="table-responsive">
@@ -687,6 +758,14 @@
 
             // Inisiasi awal
             setTimeout(syncFloatingScrollbar, 500);
+
+            // Prevent Enter key on table-inputs from submitting form, trigger blur instead
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && e.target.classList.contains('table-input')) {
+                    e.preventDefault();
+                    e.target.blur();
+                }
+            });
         });
 
         function toggleParticipant2(id) {
@@ -763,6 +842,8 @@
             formData.append('ajax_field', fieldName);
             formData.append(fieldName, value);
             formData.append('is_ajax', '1');
+            const filterYear = document.getElementById('smi_filter_year')?.value || new Date().getFullYear();
+            formData.append('filter_year', filterYear);
 
             fetch(`{{ url('peserta-smi') }}/${id}`, {
                 method: 'POST',
@@ -1038,6 +1119,9 @@
                     }
                 });
             }
+            
+            // Initial active card highlighting
+            highlightActiveCard();
         });
 
         function updateSmiFilters() {
@@ -1090,6 +1174,8 @@
                         if (statTotal) statTotal.innerText = new Intl.NumberFormat('id-ID').format(data.stats.total);
                         if (statAktif) statAktif.innerText = new Intl.NumberFormat('id-ID').format(data.stats.aktif);
                         if (statCuti) statCuti.innerText = new Intl.NumberFormat('id-ID').format(data.stats.cuti);
+                        const statLunas = document.getElementById('stat-lunas');
+                        if (statLunas) statLunas.innerText = new Intl.NumberFormat('id-ID').format(data.stats.lunas);
 
                         // Update New Monthly Stats
                         const statCountClosing = document.getElementById('stat-count-closing');
@@ -1115,8 +1201,8 @@
 
                             const statCountTotalMonth = document.getElementById('stat-count-total-month');
                             const statNomTotalMonth = document.getElementById('stat-nom-total-month');
-                            if (statCountTotalMonth) statCountTotalMonth.innerText = num(data.stats.count_spp + data.stats.count_belum);
-                            if (statNomTotalMonth) statNomTotalMonth.innerText = fmt(data.stats.nominal_spp + data.stats.nominal_belum);
+                            if (statCountTotalMonth) statCountTotalMonth.innerText = num(data.stats.count_closing + data.stats.count_spp + data.stats.count_belum);
+                            if (statNomTotalMonth) statNomTotalMonth.innerText = fmt(data.stats.nominal_closing + data.stats.nominal_spp + data.stats.nominal_belum);
 
                             monthLabelEls.forEach(el => el.innerText = data.stats.filter_month_name);
                             monthCardEls.forEach(el => el.classList.remove('d-none'));
@@ -1140,7 +1226,81 @@
                 .finally(() => {
                     container.style.opacity = '1';
                     if (typeof initCurrencyInputs === 'function') initCurrencyInputs();
+                    highlightActiveCard();
                 });
+        }
+
+        function filterByStat(type) {
+            const statusSelect = document.getElementById('smi_filter_status');
+            const sppStatusSelect = document.getElementById('smi_filter_spp_status');
+            const sppMonthSelect = document.getElementById('smi_filter_spp_month');
+            const defaultActiveMonth = "{{ request('filter_spp_month') && request('filter_spp_month') !== 'all' ? request('filter_spp_month') : date('n') }}";
+
+            if (type === 'all') {
+                if (statusSelect) statusSelect.value = 'all';
+                if (sppStatusSelect) sppStatusSelect.value = 'all';
+                if (sppMonthSelect) sppMonthSelect.value = 'all';
+            } else if (type === 'aktif') {
+                if (statusSelect) statusSelect.value = 'Aktif';
+                if (sppStatusSelect) sppStatusSelect.value = 'all';
+            } else if (type === 'cuti') {
+                if (statusSelect) statusSelect.value = 'Cuti';
+                if (sppStatusSelect) sppStatusSelect.value = 'all';
+            } else if (type === 'lunas') {
+                if (statusSelect) statusSelect.value = 'Lunas';
+                if (sppStatusSelect) sppStatusSelect.value = 'all';
+            } else {
+                // Table 2 (financial stats) filters: set month from ALL to default active month
+                if (sppMonthSelect && sppMonthSelect.value === 'all') {
+                    sppMonthSelect.value = defaultActiveMonth;
+                }
+
+                if (type === 'closing') {
+                    if (sppStatusSelect) sppStatusSelect.value = 'blue';
+                    if (statusSelect) statusSelect.value = 'all';
+                } else if (type === 'sudah_bayar') {
+                    if (sppStatusSelect) sppStatusSelect.value = '1';
+                    if (statusSelect) statusSelect.value = 'all';
+                } else if (type === 'belum_bayar') {
+                    if (sppStatusSelect) sppStatusSelect.value = '0';
+                    if (statusSelect) statusSelect.value = 'all';
+                } else if (type === 'total_month') {
+                    if (sppStatusSelect) sppStatusSelect.value = 'total_month';
+                    if (statusSelect) statusSelect.value = 'all';
+                }
+            }
+            updateSmiFilters();
+        }
+
+        function highlightActiveCard() {
+            // Remove active highlight from all table rows
+            document.querySelectorAll('[id^="row-stat-"]').forEach(row => {
+                row.classList.remove('active-stat-row');
+            });
+
+            const status = document.getElementById('smi_filter_status')?.value;
+            const sppStatus = document.getElementById('smi_filter_spp_status')?.value;
+
+            if (status === 'Aktif' && sppStatus === 'all') {
+                document.getElementById('row-stat-aktif')?.classList.add('active-stat-row');
+            } else if (status === 'Cuti' && sppStatus === 'all') {
+                document.getElementById('row-stat-cuti')?.classList.add('active-stat-row');
+            } else if (status === 'Lunas' && sppStatus === 'all') {
+                document.getElementById('row-stat-lunas')?.classList.add('active-stat-row');
+            } else if (sppStatus === 'blue') {
+                document.getElementById('row-stat-closing')?.classList.add('active-stat-row');
+            } else if (sppStatus === '1' && status === 'all') {
+                document.getElementById('row-stat-sudah_bayar')?.classList.add('active-stat-row');
+            } else if (sppStatus === '0' && status === 'all') {
+                document.getElementById('row-stat-belum_bayar')?.classList.add('active-stat-row');
+            } else if (sppStatus === 'total_month' && status === 'all') {
+                document.getElementById('row-stat-total_month')?.classList.add('active-stat-row');
+            } else if (status === 'all' && sppStatus === 'all') {
+                const monthVal = document.getElementById('smi_filter_spp_month')?.value;
+                const isMonthActive = (monthVal && monthVal !== 'all');
+                const rowId = isMonthActive ? 'row-stat-total_month' : 'row-stat-all';
+                document.getElementById(rowId)?.classList.add('active-stat-row');
+            }
         }
 
 
@@ -1246,7 +1406,7 @@
             <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #4e73df, #224abe); border: none;">
                     <h5 class="modal-title text-white font-weight-bold">
-                        <i class="fas fa-image mr-2"></i>Bukti Transfer — <span id="viewBuktiNama"></span>
+                        <i class="fas fa-image mr-2"></i>Bukti Transfer â€” <span id="viewBuktiNama"></span>
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span aria-hidden="true">&times;</span>

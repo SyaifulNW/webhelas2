@@ -30,6 +30,14 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             $newData = new Data();
             $newData->nama = '';
             $newData->status_peserta = 'peserta_baru';
+            $newData->leads = 'Ads';
+            
+            // Find M1T (Start-Up Muslim Indonesia) class ID
+            $m1tClass = Kelas::where('nama_kelas', 'like', '%Muslim Indonesia%')->first();
+            if ($m1tClass) {
+                $newData->kelas_id = $m1tClass->id;
+            }
+            
             $newData->created_by = $user->name;
             $newData->created_by_role = $user->role;
             
@@ -39,6 +47,18 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             }
             
             $newData->save();
+
+            // Create SalesPlan for M1T class
+            if ($m1tClass) {
+                $plan = new SalesPlan();
+                $plan->data_id = $newData->id;
+                $plan->kelas_id = $m1tClass->id;
+                $plan->nama = $newData->nama;
+                $plan->created_by = $user->id;
+                $plan->status = 'cold';
+                $plan->level = 'Grow Up';
+                $plan->save();
+            }
 
             $kelas = Kelas::select('id', 'nama_kelas', 'tanggal_selesai')->orderBy('nama_kelas')->get();
             // Gunakan view partial yang sama dengan loop utama untuk konsistensi
@@ -226,12 +246,6 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             $query->whereYear('created_at', $tahunFilter);
         }
 
-        // Filter Status Follow Up (from latest SalesPlan)
-        if (!empty($statusFilter)) {
-            $query->whereHas('salesplan', function($q) use ($statusFilter) {
-                $q->where('status', $statusFilter);
-            });
-        }
 
         // Filter Potensi Kelas
         if (!empty($potensiFilter)) {
@@ -522,30 +536,49 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         // Apply Status Filter to main query for pagination (after stats have been calculated)
         $statusFilter = $request->input('status');
         if (!empty($statusFilter)) {
-            if (in_array($userRole, ['chapter', 'reseller', 'agen'])) {
-                $query->whereHas('salesplan', function($q) use ($statusFilter) {
-                    $q->where('status', $statusFilter);
-                });
-            } else {
-                // For cs-mbc, administrator, etc.
-                if (!empty($daftarKelasFilter)) {
-                    if ($statusFilter === 'cold') {
-                        $query->where(function($q) use ($daftarKelasFilter) {
-                            $q->whereHas('salesplan', function($sq) use ($daftarKelasFilter) {
-                                $sq->where('kelas_id', $daftarKelasFilter)->where('status', 'cold');
-                            })->orWhereDoesntHave('salesplan', function($sq) use ($daftarKelasFilter) {
-                                $sq->where('kelas_id', $daftarKelasFilter);
-                            });
-                        });
-                    } else {
-                        $query->whereHas('salesplan', function($q) use ($daftarKelasFilter, $statusFilter) {
-                            $q->where('kelas_id', $daftarKelasFilter)->where('status', $statusFilter);
-                        });
-                    }
+            if ($statusFilter === 'total_database') {
+                // Do not apply any status filter (shows all)
+            } elseif ($statusFilter === 'database_baru') {
+                $query->whereYear('created_at', $statsYear)
+                      ->whereMonth('created_at', $statsMonth);
+            } elseif (in_array($userRole, ['chapter', 'reseller', 'agen'])) {
+                if ($statusFilter === 'potensi') {
+                    $query->whereHas('salesplan', function($q) {
+                        $q->whereIn('status', ['cold', 'tertarik', 'mau_transfer']);
+                    });
                 } else {
                     $query->whereHas('salesplan', function($q) use ($statusFilter) {
                         $q->where('status', $statusFilter);
                     });
+                }
+            } else {
+                // For cs-mbc, administrator, etc.
+                if ($statusFilter === 'potensi') {
+                    if (!empty($daftarKelasFilter)) {
+                        $query->whereHas('salesplan', function($q) use ($daftarKelasFilter) {
+                            $q->where('kelas_id', $daftarKelasFilter)->whereIn('status', ['cold', 'tertarik', 'mau_transfer']);
+                        });
+                    } else {
+                        $query->whereHas('salesplan', function($q) {
+                            $q->whereIn('status', ['cold', 'tertarik', 'mau_transfer']);
+                        });
+                    }
+                } else {
+                    if (!empty($daftarKelasFilter)) {
+                        if ($statusFilter === 'cold') {
+                            $query->whereHas('salesplan', function($sq) use ($daftarKelasFilter) {
+                                $sq->where('kelas_id', $daftarKelasFilter)->where('status', 'cold');
+                            });
+                        } else {
+                            $query->whereHas('salesplan', function($q) use ($daftarKelasFilter, $statusFilter) {
+                                $q->where('kelas_id', $daftarKelasFilter)->where('status', $statusFilter);
+                            });
+                        }
+                    } else {
+                        $query->whereHas('salesplan', function($q) use ($statusFilter) {
+                            $q->where('status', $statusFilter);
+                        });
+                    }
                 }
             }
         }
@@ -1313,19 +1346,39 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
 
     public function formM1t($identifier)
     {
-        $original = str_replace('-', ' ', $identifier);
-        
-        if (strpos($identifier, 'chapter-') === 0) {
-            $chapterName = str_replace('chapter-', '', $identifier);
-            $chapterName = str_replace('-', ' ', $chapterName);
-            $user = \App\Models\User::where('role', 'chapter')
-                ->where('chapter', 'LIKE', '%' . $chapterName . '%')
-                ->first();
+        if (strtolower($identifier) === 'cs-mbc') {
+            // Rotator ratio: Yasmin (40%), Linda (40%), Shafa Zahra (20%)
+            // Sequence of 5 items: Yasmin: 2, Linda: 2, Shafa Zahra: 1
+            $sequence = ['Yasmin', 'Linda', 'Yasmin', 'Linda', 'Shafa Zahra'];
+            try {
+                $index = \Illuminate\Support\Facades\Cache::get('form_m1t_rotator_index', 0);
+                \Illuminate\Support\Facades\Cache::put('form_m1t_rotator_index', ($index + 1) % 5, 43200); // Store for 30 days (43200 mins)
+            } catch (\Exception $e) {
+                $index = rand(0, 4);
+            }
+            
+            $selectedCsName = $sequence[$index];
+            $user = \App\Models\User::where('name', $selectedCsName)->first();
+            
+            // Fallback to any cs-mbc if not found
+            if (!$user) {
+                $user = \App\Models\User::where('role', 'cs-mbc')->first();
+            }
         } else {
-            // Check by username, or by name if username is null
-            $user = \App\Models\User::where('username', $identifier)
-                ->orWhere('name', 'LIKE', '%' . $original . '%')
-                ->first();
+            $original = str_replace('-', ' ', $identifier);
+            
+            if (strpos($identifier, 'chapter-') === 0) {
+                $chapterName = str_replace('chapter-', '', $identifier);
+                $chapterName = str_replace('-', ' ', $chapterName);
+                $user = \App\Models\User::where('role', 'chapter')
+                    ->where('chapter', 'LIKE', '%' . $chapterName . '%')
+                    ->first();
+            } else {
+                // Check by username, or by name if username is null
+                $user = \App\Models\User::where('username', $identifier)
+                    ->orWhere('name', 'LIKE', '%' . $original . '%')
+                    ->first();
+            }
         }
 
         // Fallback to ID if somehow it was a numeric ID
@@ -1368,6 +1421,10 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             "Mengenal Coach: " . $request->input('mengenal_coach_label')
         ];
 
+        if ($request->filled('jadwal_zoom_tanggal') && $request->filled('jadwal_zoom_jam')) {
+            $answers[] = "Jadwal Zoom: " . $request->input('jadwal_zoom_tanggal') . " " . $request->input('jadwal_zoom_jam');
+        }
+
         $totalScore = $request->input('total_score');
 
         // Determine Category/Potensi
@@ -1381,10 +1438,48 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
         $data->situasi_bisnis = implode("\n", $answers) . "\n\nTotal Skor Form: " . $totalScore . " / 51\nKategori: " . strtoupper($category);
         $data->potensi = $category;
         $data->status_peserta = 'peserta_baru';
-        $data->leads = 'Open House';
+        $data->leads = 'Ads';
+        
+        // Find M1T (Start-Up Muslim Indonesia) class ID
+        $m1tClass = Kelas::where('nama_kelas', 'like', '%Muslim Indonesia%')->first();
+        if ($m1tClass) {
+            $data->kelas_id = $m1tClass->id;
+        }
+
         $data->created_by = $user->name;
         $data->created_by_role = $user->role;
         $data->save();
+
+        // Create SalesPlan for M1T class
+        if ($m1tClass) {
+            $plan = new SalesPlan();
+            $plan->data_id = $data->id;
+            $plan->kelas_id = $m1tClass->id;
+            $plan->nama = $data->nama;
+            $plan->created_by = $user->id;
+            $plan->status = 'cold';
+            $plan->level = 'Grow Up';
+            $plan->save();
+        }
+
+        // Create ZoomSchedule if date & time are provided
+        if ($request->filled('jadwal_zoom_tanggal') && $request->filled('jadwal_zoom_jam')) {
+            try {
+                $scheduledAt = \Carbon\Carbon::parse($request->input('jadwal_zoom_tanggal') . ' ' . $request->input('jadwal_zoom_jam'));
+                
+                $schedule = new \App\Models\ZoomSchedule();
+                $schedule->data_id = $data->id;
+                $schedule->salesplan_id = isset($plan) ? $plan->id : null;
+                $schedule->cs_id = $user->id;
+                $schedule->scheduled_at = $scheduledAt;
+                $schedule->zoom_link = ''; // Default empty
+                $schedule->status = 'scheduled'; // Default status
+                $schedule->notes = 'Dibuat otomatis dari Google Form M1T';
+                $schedule->save();
+            } catch (\Exception $e) {
+                // Ignore formatting exceptions
+            }
+        }
 
         return redirect()->back()->with('success', 'Data Open House M1T berhasil disubmit.');
     }

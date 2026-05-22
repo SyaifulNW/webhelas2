@@ -686,7 +686,8 @@
     }
     .editable:focus {
         background-color: #fff !important;
-        outline: 2px solid #0d6efd;
+        outline: 2px solid #0d6efd !important;
+        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
         color: #000;
         min-width: 100px;
     }
@@ -1200,7 +1201,10 @@ $(document).ready(function() {
                                     @endphp
                                     
                                     <div class="d-flex align-items-center">
-                                        <strong class="text-dark">{{ $plan->nama ?? '-' }}</strong>
+                                        <strong contenteditable="{{ $canEdit ? 'true' : 'false' }}"
+                                            class="{{ $canEdit ? 'editable' : '' }} text-dark"
+                                            data-id="{{ $plan->id }}"
+                                            data-field="nama">{{ $plan->nama ?? '-' }}</strong>
                                         <i class="fas fa-eye text-info cursor-pointer btn-month-detail-trigger ml-2" 
                                            title="Lihat Detail"
                                            data-name="{{ $plan->nama }}" 
@@ -1517,6 +1521,14 @@ $(document).ready(function() {
         }
 
         // Simpan nilai awal saat fokus
+        // Blur contenteditable elements when Enter is pressed
+        $(document).on('keydown', '[contenteditable="true"]', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                $(this).blur();
+            }
+        });
+
         $(document).on('focus', '.editable', function() {
             // fu-editable punya handler sendiri
             if ($(this).hasClass('fu-editable')) return;
@@ -2013,7 +2025,14 @@ $(document).ready(function() {
 
         <tr style="background-color: #e3f2fd;">
             <td style="padding: 8px; border: 1px solid #ccc;">{{ $loop->iteration }}</td>
-            <td style="padding: 8px; border: 1px solid #ccc;">{{ $p->nama }}</td>
+            <td style="padding: 8px; border: 1px solid #ccc;">
+                <span contenteditable="{{ $canEditThisParticipant ? 'true' : 'false' }}"
+                      class="{{ $canEditThisParticipant ? 'editable' : '' }} fw-bold text-dark"
+                      data-id="{{ $p->id }}"
+                      data-field="nama">
+                      {{ $p->nama }}
+                </span>
+            </td>
             @if($isCsMbc || $kelasFilter == 'Start-Up Muslim Indonesia' || request('type') == 'smi' || request('type') == 'mbc')
             <td style="padding: 8px; border: 1px solid #ccc;">{{ (request('type') == 'smi' || $kelasFilter == 'Start-Up Muslim Indonesia') ? ($p->level ?? '-') : ($p->kelas->nama_kelas ?? '-') }}</td>
             <td class="fw-bold" style="padding: 8px; border: 1px solid #ccc;">

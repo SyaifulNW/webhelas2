@@ -98,7 +98,7 @@ class PesertaSmiController extends Controller
         if ($role === 'chapter' || in_array($role, ['reseller', 'agen'])) {
             $chapterName = $user->chapter;
             $userId = $user->id;
-            
+                
             // Identify Direct Team Members (only those personally recruited)
             $resellerMembersIds = \App\Models\User::whereIn('role', ['reseller', 'agen'])
                 ->where('created_by', $userId)
@@ -144,46 +144,7 @@ class PesertaSmiController extends Controller
             });
         }
 
-        // 1. SCOPE FILTERS (Global Dashboard Scope: Month, Year, Entry Period)
-        $sppMonth = $request->get('filter_spp_month', date('n'));
-        $yearFilter = $request->get('filter_year', date('Y'));
-        
-        // Ensure month is numeric for internal logic
-        $mNum = ($sppMonth !== 'all') ? (int)$sppMonth : null;
-        $yNum = ($yearFilter !== 'all') ? (int)$yearFilter : (int)date('Y');
-        
-        if ($sppMonth !== 'all') {
-            $month = (int) $sppMonth;
-            if ($month >= 1 && $month <= 12) {
-                // Filter by active period (In that month and year)
-                if ($yearFilter !== 'all') {
-                    $dateStart = \Carbon\Carbon::createFromDate($yearFilter, $month, 1)->startOfMonth()->format('Y-m-d');
-                    $dateEnd = \Carbon\Carbon::createFromDate($yearFilter, $month, 1)->endOfMonth()->format('Y-m-d');
 
-                    $query->where(function ($q) use ($dateStart, $dateEnd) {
-                        $q->whereDate('tanggal_masuk', '<=', $dateEnd)
-                            ->where(function ($sq) use ($dateStart) {
-                                $sq->whereDate('tanggal_selesai', '>=', $dateStart)
-                                    ->orWhereNull('tanggal_selesai');
-                            });
-                    });
-                }
-            }
-        } else {
-            // Still apply Year filter if active (show people active in this year)
-            if ($yearFilter !== 'all') {
-                $dateStart = \Carbon\Carbon::createFromDate($yearFilter, 1, 1)->startOfYear()->format('Y-m-d');
-                $dateEnd = \Carbon\Carbon::createFromDate($yearFilter, 12, 31)->endOfYear()->format('Y-m-d');
-
-                $query->where(function ($q) use ($dateStart, $dateEnd) {
-                    $q->whereDate('tanggal_masuk', '<=', $dateEnd)
-                        ->where(function ($sq) use ($dateStart) {
-                            $sq->whereDate('tanggal_selesai', '>=', $dateStart)
-                                ->orWhereNull('tanggal_selesai');
-                        });
-                });
-            }
-        }
 
         // Filter Bulan & Tahun Masuk (Strict start date filtering)
         if ($request->has('filter_entry_year') && $request->filter_entry_year && $request->filter_entry_year !== 'all') {
@@ -193,10 +154,7 @@ class PesertaSmiController extends Controller
             $query->whereMonth('tanggal_masuk', $request->filter_entry_month);
         }
 
-        // Filter Status (Aktif, Cuti, Lulus)
-        if ($request->has('filter_status') && $request->filter_status && $request->filter_status !== 'all') {
-            $query->where('status', $request->filter_status);
-        }
+
 
         // Filter Approval Status
         if ($request->has('filter_approval') && $request->filter_approval && $request->filter_approval !== 'all') {
@@ -294,26 +252,97 @@ class PesertaSmiController extends Controller
         }
 
         // --- CUMULATIVE STATS (Based on Global Scope only) ---
+        // Clone query for global stats counters (Total, Aktif, Cuti) BEFORE month/year filter is applied
+        $globalQuery = clone $query;
+
+        // Apply month/year filter to $query
+        $sppMonth = $request->get('filter_spp_month', date('n'));
+        $yearFilter = $request->get('filter_year', date('Y'));
+        
+        // Ensure month is numeric for internal logic
+        $mNum = ($sppMonth !== 'all') ? (int)$sppMonth : null;
+        $yNum = ($yearFilter !== 'all') ? (int)$yearFilter : (int)date('Y');
+        
+        if ($sppMonth !== 'all') {
+            $month = (int) $sppMonth;
+            if ($month >= 1 && $month <= 12) {
+                // Filter by active period (In that month and year)
+                if ($yearFilter !== 'all') {
+                    $dateStart = \Carbon\Carbon::createFromDate($yearFilter, $month, 1)->startOfMonth()->format('Y-m-d');
+                    $dateEnd = \Carbon\Carbon::createFromDate($yearFilter, $month, 1)->endOfMonth()->format('Y-m-d');
+
+                    $query->where(function ($q) use ($dateStart, $dateEnd) {
+                        $q->whereDate('tanggal_masuk', '<=', $dateEnd)
+                            ->where(function ($sq) use ($dateStart) {
+                                $sq->whereDate('tanggal_selesai', '>=', $dateStart)
+                                    ->orWhereNull('tanggal_selesai');
+                            });
+                    });
+                }
+            }
+        } else {
+            // Still apply Year filter if active (show people active in this year)
+            if ($yearFilter !== 'all') {
+                $dateStart = \Carbon\Carbon::createFromDate($yearFilter, 1, 1)->startOfYear()->format('Y-m-d');
+                $dateEnd = \Carbon\Carbon::createFromDate($yearFilter, 12, 31)->endOfYear()->format('Y-m-d');
+
+                $query->where(function ($q) use ($dateStart, $dateEnd) {
+                    $q->whereDate('tanggal_masuk', '<=', $dateEnd)
+                        ->where(function ($sq) use ($dateStart) {
+                            $sq->whereDate('tanggal_selesai', '>=', $dateStart)
+                                ->orWhereNull('tanggal_selesai');
+                        });
+                });
+            }
+        }
+
+        // --- CUMULATIVE STATS ---
+        $globalStats = (clone $globalQuery)->with(['salesPlan.createdBy', 'closingCs', 'createdBy'])->get();
         $totalStats = (clone $query)->with(['salesPlan.createdBy', 'closingCs', 'createdBy'])->get();
 
         // [USER_REQUEST] Dashboard stats should only include Approved participants if they need approval
         // Only apply this restriction for the general view (when not filtering for a specific approval status)
         if (!$request->has('filter_approval') || $request->filter_approval === 'all') {
-            $totalStats = $totalStats->filter(function($item) {
+            $globalStats = $globalStats->filter(function($item) {
                 $creatorRole = strtolower($item->closingCs->role ?? $item->createdBy->role ?? $item->salesPlan->createdBy->role ?? '');
                 $needsApproval = in_array($creatorRole, ['reseller', 'chapter', 'agen']);
-                
                 if ($needsApproval) {
                     return $item->approval_status === 'Approved';
                 }
-                return true; // Auto-include others (CS-MBC etc)
+                return true;
+            });
+            $totalStats = $totalStats->filter(function($item) {
+                $creatorRole = strtolower($item->closingCs->role ?? $item->createdBy->role ?? $item->salesPlan->createdBy->role ?? '');
+                $needsApproval = in_array($creatorRole, ['reseller', 'chapter', 'agen']);
+                if ($needsApproval) {
+                    return $item->approval_status === 'Approved';
+                }
+                return true;
             });
         }
 
+        $lunasCount = 0;
+        foreach ($globalStats as $item) {
+            $isManualLunas = ($item->is_lunas == 1);
+            $itemLevel = strtolower($item->level ?? $item->salesPlan->level ?? '');
+            $levelNominal = str_contains($itemLevel, 'grow') ? 1500000 : 1000000;
+            $countPaid = 0;
+            for ($m = 1; $m <= 12; $m++) {
+                if (($item->{"spp_$m"} ?? 0) >= $levelNominal) {
+                    $countPaid++;
+                }
+            }
+            if ($isManualLunas || $countPaid >= 6) {
+                $lunasCount++;
+            }
+        }
+
+        $activeMonth = ($sppMonth !== 'all') ? (int)$sppMonth : (int)date('n');
         $stats = [
-            'total' => $totalStats->count(),
-            'aktif' => $totalStats->where('status', 'Aktif')->count(),
-            'cuti' => $totalStats->where('status', 'Cuti')->count(),
+            'total' => $globalStats->count(),
+            'aktif' => $globalStats->where('status', 'Aktif')->count(),
+            'cuti' => $globalStats->where('status', 'Cuti')->count(),
+            'lunas' => $lunasCount,
             'count_closing' => 0,
             'nominal_closing' => 0,
             'count_spp' => 0,
@@ -324,8 +353,8 @@ class PesertaSmiController extends Controller
             'nominal_total_spp' => 0,
             'count_total_income' => 0,
             'nominal_total_income' => 0,
-            'is_month_filter' => ($sppMonth !== 'all'),
-            'filter_month_name' => ($sppMonth !== 'all' ? ($monthsRaw[(int) $sppMonth] ?? '') : '')
+            'is_month_filter' => true,
+            'filter_month_name' => ($monthsRaw[$activeMonth] ?? '')
         ];
 
         // 2. DISPLAY FILTERS (Only affects the Table below, not the Cards)
@@ -358,8 +387,8 @@ class PesertaSmiController extends Controller
             });
         }
 
-        if ($sppMonth !== 'all') {
-            $mNum = (int) $sppMonth;
+        if (true) {
+            $mNum = $activeMonth;
 
             foreach ($totalStats as $p) {
                 // [USER_REQUEST] Dashboard should show payment status for ALL active participants in the selected month
@@ -488,27 +517,82 @@ class PesertaSmiController extends Controller
             $stats['belum_bayar'] = $stats['count_belum'];
         }
 
+        // Filter Status (Aktif, Cuti, Lulus, Lunas) - Applied only to list view, not stats cards
+        if ($request->has('filter_status') && $request->filter_status && $request->filter_status !== 'all') {
+            if ($request->filter_status === 'Lunas') {
+                $query->where(function ($q) {
+                    $q->where('is_lunas', 1)
+                      ->orWhereRaw("((CASE WHEN spp_1>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_2>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_3>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_4>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_5>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_6>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_7>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_8>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_9>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_10>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_11>=1000000 THEN 1 ELSE 0 END)+(CASE WHEN spp_12>=1000000 THEN 1 ELSE 0 END)) >= 6");
+                });
+            } else {
+                $query->where('status', $request->filter_status);
+            }
+        }
+
         $data = $query->with(['salesPlan.createdBy', 'closingCs', 'createdBy'])->get();
 
         // [USER_REQUEST] In-memory filter for SPP status (month-specific)
         // Must be done in-memory because Blue Checklist (isBlue) is a computed value, not a DB column.
         // "Belum Lunas" = no Green (spp_N = 0) AND no Blue (not closing/planned month)
         // "Sudah Lunas" = has Green (spp_N > 0) OR has Blue
-        if ($sppMonth !== 'all' && $sppStatus !== 'all') {
-            $mNum = (int)$sppMonth;
+        if ($sppMonth !== 'all' || $sppStatus !== 'all') {
+            $mNum = ($sppMonth !== 'all') ? (int)$sppMonth : (int)date('n');
             $yNum = (int)$yearFilter;
             $data = $data->filter(function($p) use ($mNum, $yNum, $sppStatus) {
-                $val = (float)($p->{"spp_$mNum"} ?? 0);
-                // [USER_REQUEST] Level-based threshold: Grow Up = 1.500.000, Start Up = 1.000.000
-                $pLevel = strtolower($p->level ?? $p->salesPlan->level ?? '');
-                $pLevelNominal = str_contains($pLevel, 'grow') ? 1500000 : 1000000;
-                $isGreen = ($val >= $pLevelNominal); // Green Checklist = paid at/above level nominal
+                // Exclude Cuti status entirely from monthly stats lists (consistent with stats calculation)
+                if ($p->status === 'Cuti' && request()->get('filter_status') !== 'Cuti') {
+                    return false;
+                }
 
-                // Blue Checklist: Closing month
-                $effDate = $p->tanggal_masuk ? \Carbon\Carbon::parse($p->tanggal_masuk) : $p->created_at;
-                $isClosing = ($effDate->month == $mNum && $effDate->year == $yNum);
+                // Apply the exact same approval logic used in stats calculation to keep lists perfectly synced
+                $reqApproval = request()->get('filter_approval', 'all');
+                if ($reqApproval === 'all') {
+                    $creatorRole = strtolower($p->closingCs->role ?? $p->createdBy->role ?? $p->salesPlan->createdBy->role ?? '');
+                    $needsApproval = in_array($creatorRole, ['reseller', 'chapter', 'agen']);
+                    if ($needsApproval && $p->approval_status !== 'Approved') {
+                        return false;
+                    }
+                }
 
-                // Blue Checklist: Planned schedule (custom or salesPlan selected_months)
+                // Calculate Lunas Badge status locally for stat sync
+                $paidMonthsCount = 0;
+                for ($i = 1; $i <= 12; $i++) {
+                    if ((float) ($p->{"spp_$i"} ?? 0) >= 1000000)
+                        $paidMonthsCount++;
+                }
+                $isLunasBadge = ($p->is_lunas == 1 || $paidMonthsCount >= 6);
+
+                // Exclude Lunas Badge participants from monthly dashboard stats entirely,
+                // EXCEPT if the user is explicitly filtering for Lunas participants!
+                if ($isLunasBadge && request()->get('filter_status') !== 'Lunas') {
+                    return false;
+                }
+
+                $val = 0;
+                $tglSpp = $p->{"tanggal_spp_$mNum"};
+                $paymentYear = $tglSpp ? \Carbon\Carbon::parse($tglSpp)->format('Y') : null;
+                if (($p->{"spp_$mNum"} ?? 0) > 0 && (!$paymentYear || $paymentYear == $yNum)) {
+                    $val = (float) $p->{"spp_$mNum"};
+                }
+
+                // Blue Checklist: Closing month matching stats logic exactly
+                $effectiveDate = null;
+                if ($p->salesPlan) {
+                    if ($p->salesPlan->tanggal_closing) {
+                        $effectiveDate = \Carbon\Carbon::parse($p->salesPlan->tanggal_closing);
+                    } else {
+                        // Fallback to tanggal_masuk or updated_at
+                        $effectiveDate = $p->tanggal_masuk ? \Carbon\Carbon::parse($p->tanggal_masuk) : $p->salesPlan->updated_at;
+                    }
+                } else {
+                    $effectiveDate = $p->tanggal_masuk ? \Carbon\Carbon::parse($p->tanggal_masuk) : $p->created_at;
+                }
+
+                $effM = (int)$effectiveDate->month;
+                $effY = (int)$effectiveDate->year;
+                $isClosing = ($effM == $mNum && $effY == $yNum);
+
+                // Blue Checklist: Planned schedule
                 $isPlanned = false;
                 $customSch = $p->spp_custom_schedule ?? [];
                 foreach ((array)$customSch as $sch) {
@@ -526,10 +610,27 @@ class PesertaSmiController extends Controller
                 }
 
                 $isBlue = $isClosing || $isPlanned;
-                $isSudahBayar = $isGreen || $isBlue;
 
-                if ($sppStatus === '1') return $isSudahBayar;   // Sudah Lunas: hanya yang hijau/biru
-                if ($sppStatus === '0') return !$isSudahBayar;  // Belum Lunas: yang tidak ada hijau/biru
+                if ($sppStatus === '1') {
+                    // Sudah Bayar: strictly when it's not a new closing and they have actually paid (val > 0)
+                    return !$isBlue && $val > 0;
+                }
+
+                if ($sppStatus === '0') {
+                    // Belum Bayar: strictly Aktif status, not blue, and paid val is 0
+                    return $p->status === 'Aktif' && !$isBlue && $val == 0;
+                }
+
+                if ($sppStatus === 'blue') {
+                    // Closing Baru: strictly new closings in this month
+                    return $isClosing;
+                }
+
+                if ($sppStatus === 'total_month') {
+                    // Total Keseluruhan: strictly matches the sum of Closing Baru + Sudah Bayar + Belum Bayar
+                    return $isClosing || (!$isBlue && $val > 0) || ($p->status === 'Aktif' && !$isBlue && $val == 0);
+                }
+
                 return true;
             });
         }
@@ -976,6 +1077,7 @@ class PesertaSmiController extends Controller
                 if (strpos($field, 'spp_') === 0 && strpos($field, 'tanggal') === false) {
                     $monthNum = (int) str_replace('spp_', '', $field);
                     $dateField = 'tanggal_spp_' . $monthNum;
+                    $filterYear = $request->input('filter_year', date('Y'));
 
                     if ((float) $value > 0) {
                         if (!$peserta->$dateField) {
@@ -992,8 +1094,56 @@ class PesertaSmiController extends Controller
                             }
                             $peserta->$dateField = $finalDate;
                         }
+
+                        // Remove from excluded_months if checked
+                        if ($peserta->salesPlan) {
+                            $plan = $peserta->salesPlan;
+                            $sel = $plan->selected_months;
+                            if (is_string($sel)) {
+                                $sel = json_decode($sel, true) ?? [];
+                            }
+                            if (!is_array($sel)) {
+                                $sel = [];
+                            }
+                            if (isset($sel['excluded_months'][$filterYear])) {
+                                $sel['excluded_months'][$filterYear] = array_values(array_diff($sel['excluded_months'][$filterYear], [$monthNum]));
+                                $plan->selected_months = $sel;
+                                $plan->save();
+                            }
+                        }
                     } else {
                         $peserta->$dateField = null;
+
+                        // Add to excluded_months if unchecked
+                        if ($peserta->salesPlan) {
+                            $plan = $peserta->salesPlan;
+                            $sel = $plan->selected_months;
+                            if (is_string($sel)) {
+                                $sel = json_decode($sel, true) ?? [];
+                            }
+                            if (!is_array($sel)) {
+                                $sel = [];
+                            }
+                            
+                            // Remove from selected_months array if it was there
+                            if (isset($sel[$filterYear]) && is_array($sel[$filterYear])) {
+                                $sel[$filterYear] = array_values(array_diff($sel[$filterYear], [$monthNum]));
+                            }
+
+                            // Add to excluded_months
+                            if (!isset($sel['excluded_months'])) {
+                                $sel['excluded_months'] = [];
+                            }
+                            if (!isset($sel['excluded_months'][$filterYear])) {
+                                $sel['excluded_months'][$filterYear] = [];
+                            }
+                            if (!in_array($monthNum, $sel['excluded_months'][$filterYear])) {
+                                $sel['excluded_months'][$filterYear][] = $monthNum;
+                            }
+
+                            $plan->selected_months = $sel;
+                            $plan->save();
+                        }
                     }
                 }
 

@@ -509,7 +509,7 @@ class SalesPlanController extends Controller
     public function inlineUpdate(Request $request)
     {
         try {
-            if (auth()->user() && strtolower(auth()->user()->role) === 'administrator' && !in_array($request->field, ['tanggal_closing', 'komentar_atasan', 'nominal', 'keterangan'])) {
+            if (auth()->user() && strtolower(auth()->user()->role) === 'administrator' && !in_array($request->field, ['tanggal_closing', 'komentar_atasan', 'nominal', 'keterangan', 'nama'])) {
                 return response()->json(['error' => 'Akses ditolak: Administrator hanya diizinkan melihat data kecuali field tertentu.'], 403);
             }
 
@@ -523,6 +523,7 @@ class SalesPlanController extends Controller
             }
 
             $allowedFields = [
+                'nama',
                 'fu1_hasil',
                 'fu1_tindak_lanjut',
                 'fu2_hasil',
@@ -599,6 +600,25 @@ class SalesPlanController extends Controller
             }
 
             $value = $request->value;
+
+            if ($request->field === 'nama') {
+                $plan->nama = $value;
+                $plan->save();
+
+                $peserta = $plan->pesertaSmi;
+                if ($peserta) {
+                    $peserta->nama = $value;
+                    $peserta->save();
+                }
+
+                $data = $plan->data;
+                if ($data) {
+                    $data->nama = $value;
+                    $data->save();
+                }
+
+                return response()->json(['success' => true]);
+            }
 
             if ($request->field === 'tanggal_masuk' || $request->field === 'tanggal_closing') {
                 $plan->tanggal_closing = $value;

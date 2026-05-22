@@ -478,39 +478,29 @@ class PenjualanController extends Controller
 
             $monthlyOmset[$m] = $pusatSum + $chapterSum;
 
-            // Realisasi Peserta M1T per Bulan (Match dengan daftar di Salesplan)
+            // Realisasi Peserta M1T per Bulan (Match dengan daftar di Real Menu Data Peserta M1T)
             // Gunakan $m1tTahun agar filter tahun di tabel Pertumbuhan bekerja
-            $monthlySMI[$m] = SalesPlan::where('status', 'sudah_transfer')
-                ->whereHas('kelas', function ($q) {
-                    $q->where('nama_kelas', 'Start-Up Muslim Indonesia');
+            $monthlySMI[$m] = PesertaSmi::where('status', 'Aktif')
+                ->whereHas('salesPlan', function ($q) {
+                    $q->where('status', 'sudah_transfer')
+                      ->whereHas('kelas', function ($qk) {
+                          $qk->where('nama_kelas', 'Start-Up Muslim Indonesia');
+                      });
                 })
-                ->whereDoesntHave('pesertaSmi', function ($q) {
-                    $q->where('status', 'Cuti');
-                })
-                ->where(function ($q) use ($m1tTahun, $m) {
-                    $q->whereMonth('tanggal_closing', $m);
+                ->whereMonth('tanggal_masuk', $m)
+                ->where(function ($q) use ($m1tTahun) {
                     if ($m1tTahun !== 'all') {
-                        $q->whereYear('tanggal_closing', $m1tTahun);
+                        $q->whereYear('tanggal_masuk', $m1tTahun);
                     }
-
-                    $q->orWhere(function ($q2) use ($m1tTahun, $m) {
-                        $q2->whereNull('tanggal_closing')
-                            ->whereHas('pesertaSmi', function ($sub) use ($m1tTahun, $m) {
-                                $sub->whereNotNull('tanggal_masuk')->whereMonth('tanggal_masuk', $m);
-                                if ($m1tTahun !== 'all') {
-                                    $sub->whereYear('tanggal_masuk', $m1tTahun);
-                                }
-                            });
+                })
+                ->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereHas('closingCs', function ($rc) {
+                            $rc->whereNotIn('role', ['reseller', 'chapter', 'agen']);
+                        })
+                        ->orWhereDoesntHave('closingCs');
                     })
-                        ->orWhere(function ($q3) use ($m1tTahun, $m) {
-                            $q3->whereNull('tanggal_closing')
-                                ->whereDoesntHave('pesertaSmi', function ($sub) {
-                                    $sub->whereNotNull('tanggal_masuk'); })
-                                ->whereMonth('updated_at', $m);
-                            if ($m1tTahun !== 'all') {
-                                $q3->whereYear('updated_at', $m1tTahun);
-                            }
-                        });
+                    ->orWhere('approval_status', 'Approved');
                 })
                 ->count();
         }
@@ -520,30 +510,25 @@ class PenjualanController extends Controller
         // ======================================================
         $cumulativeSMI = [];
 
-        // Hitung saldo awal (jumlah peserta dari tahun-tahun sebelumnya)
+        // Hitung saldo awal (jumlah peserta dari tahun-tahun sebelumnya yang disetujui & aktif)
         $initialTotal = 0;
         if ($m1tTahun !== 'all') {
-            $initialTotal = SalesPlan::where('status', 'sudah_transfer')
-                ->whereHas('kelas', function ($q) {
-                    $q->where('nama_kelas', 'Start-Up Muslim Indonesia');
+            $initialTotal = PesertaSmi::where('status', 'Aktif')
+                ->whereHas('salesPlan', function ($q) {
+                    $q->where('status', 'sudah_transfer')
+                      ->whereHas('kelas', function ($qk) {
+                          $qk->where('nama_kelas', 'Start-Up Muslim Indonesia');
+                      });
                 })
-                ->whereDoesntHave('pesertaSmi', function ($q) {
-                    $q->where('status', 'Cuti');
-                })
-                ->where(function ($q) use ($m1tTahun) {
-                    $q->whereYear('tanggal_closing', '<', $m1tTahun)
-                        ->orWhere(function ($q2) use ($m1tTahun) {
-                            $q2->whereNull('tanggal_closing')
-                                ->whereHas('pesertaSmi', function ($sub) use ($m1tTahun) {
-                                    $sub->whereNotNull('tanggal_masuk')->whereYear('tanggal_masuk', '<', $m1tTahun);
-                                });
+                ->whereYear('tanggal_masuk', '<', $m1tTahun)
+                ->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereHas('closingCs', function ($rc) {
+                            $rc->whereNotIn('role', ['reseller', 'chapter', 'agen']);
                         })
-                        ->orWhere(function ($q3) use ($m1tTahun) {
-                            $q3->whereNull('tanggal_closing')
-                                ->whereDoesntHave('pesertaSmi', function ($sub) {
-                                    $sub->whereNotNull('tanggal_masuk'); })
-                                ->whereYear('updated_at', '<', $m1tTahun);
-                        });
+                        ->orWhereDoesntHave('closingCs');
+                    })
+                    ->orWhere('approval_status', 'Approved');
                 })
                 ->count();
         }

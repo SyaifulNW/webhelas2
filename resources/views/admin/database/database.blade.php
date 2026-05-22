@@ -33,6 +33,79 @@
     </style>
 
     <style>
+        .hover-float {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .hover-float:hover {
+            transform: translateY(-5px) !important;
+            box-shadow: 0 10px 24px rgba(37, 121, 158, 0.22) !important;
+        }
+        .g-stat-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .g-stat-card:hover {
+            transform: translateY(-5px) !important;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Hover borders for top cards */
+        #cardDatabaseBaru {
+            border: 2px solid transparent !important;
+        }
+        #cardDatabaseBaru:hover {
+            border: 2px solid #54b2d3 !important;
+        }
+        #cardTotalDatabase {
+            border: 2px solid #dee2e6 !important;
+        }
+        #cardTotalDatabase:hover {
+            border: 2px solid #25799E !important;
+        }
+        #cardJumlahPotensi {
+            border: 2px solid #dee2e6 !important;
+        }
+        #cardJumlahPotensi:hover {
+            border: 2px solid #E0A800 !important;
+        }
+
+        /* Hover borders for bottom legend cards */
+        #legendCold .legend-card-interactive {
+            border: 2px solid #dee2e6 !important;
+        }
+        #legendCold .legend-card-interactive:hover {
+            border: 2px solid #6c757d !important;
+        }
+        #legendTertarik .legend-card-interactive {
+            border: 2px solid #dee2e6 !important;
+        }
+        #legendTertarik .legend-card-interactive:hover {
+            border: 2px solid #e0b400 !important;
+        }
+        #legendMauTransfer .legend-card-interactive {
+            border: 2px solid #dee2e6 !important;
+        }
+        #legendMauTransfer .legend-card-interactive:hover {
+            border: 2px solid #28a745 !important;
+        }
+        #legendSudahTransfer .legend-card-interactive {
+            border: 2px solid #dee2e6 !important;
+        }
+        #legendSudahTransfer .legend-card-interactive:hover {
+            border: 2px solid #007bff !important;
+        }
+        #legendNo .legend-card-interactive {
+            border: 2px solid #dee2e6 !important;
+        }
+        #legendNo .legend-card-interactive:hover {
+            border: 2px solid #dc3545 !important;
+        }
+        #legendTotal .legend-card-interactive {
+            border: 2px solid transparent !important;
+        }
+        #legendTotal .legend-card-interactive:hover {
+            border: 2px solid #25799E !important;
+        }
+
         .legend-card-interactive {
             cursor: pointer !important;
             transition: all 0.2s ease-in-out !important;
@@ -546,23 +619,20 @@
                     @if($userRole === 'cs-mbc' || $isAdminCSView)
                         <div class="mb-5 d-flex flex-column gap-4">
                             <!-- Row 1: Header Stats & Filters -->
-                            <div class="d-flex align-items-stretch flex-wrap gap-5">
-                                {{-- Stats Table --}}
-                                <div class="bg-white shadow-sm border d-flex" style="border-radius: 12px; overflow: hidden; min-width: 380px;">
-                                    <div class="px-4 py-3 text-center" style="background: linear-gradient(135deg, #1d617e 0%, #25799E 100%); border-right: 1px solid rgba(255,255,255,0.1); flex: 1;">
+                            <div class="d-flex align-items-stretch flex-wrap gap-4">
+                                {{-- Card Database Baru --}}
+                                <div class="bg-white shadow-sm hover-float text-center" id="cardDatabaseBaru" style="border-radius: 12px; overflow: hidden; min-width: 140px; background: linear-gradient(135deg, #1d617e 0%, #25799E 100%); cursor: pointer;" onclick="filterByLegendStatus('database_baru')">
+                                    <div class="px-4 py-3">
                                         <div class="text-white fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px; opacity: 0.9;">DATABASE BARU</div>
                                         <div class="text-white-50" style="font-size: 0.65rem; margin-top: -2px;">{{ $bulanLabel }}</div>
                                         <div class="text-white fw-bold mt-2" style="font-size: 1.25rem;"><span id="statDatabaseBaru">{{ $databaseBaru }}</span> <small style="font-size: 0.8rem; opacity: 0.7;">dari {{ $target }}</small></div>
                                     </div>
-                                    <div class="px-4 py-3 text-center d-flex flex-column justify-content-center" style="flex: 1; border-right: 1px solid #dee2e6;">
-                                        <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">TOTAL DATABASE</div>
-                                        <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #25799E;" id="statTotalDatabase">{{ $totalDatabase }}</div>
-                                    </div>
+                                </div>
 
-                                    <div class="px-4 py-3 text-center flex-column justify-content-center" style="flex: 1; {{ request('ikut_kelas') === '1' ? 'display: none !important;' : 'display: flex !important;' }}" id="cardJumlahPotensi">
-                                        <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">JUMLAH POTENSI</div>
-                                        <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #E0A800;" id="statJumlahPotensi">{{ $jumlahPotensi ?? 0 }}</div>
-                                    </div>
+                                {{-- Card Total Database --}}
+                                <div class="bg-white shadow-sm hover-float px-4 py-3 text-center d-flex flex-column justify-content-center" id="cardTotalDatabase" style="border-radius: 12px; min-width: 140px; cursor: pointer;" onclick="filterByLegendStatus('total_database')">
+                                    <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">TOTAL DATABASE</div>
+                                    <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #25799E;" id="statTotalDatabase">{{ $totalDatabase }}</div>
                                 </div>
 
 
@@ -620,6 +690,12 @@
                                         </button>
                                     </div>
                                 </div>
+
+                                {{-- Jumlah Potensi (Ditaruh di Sebelah Kanan) --}}
+                                <div class="bg-white shadow-sm hover-float px-4 py-3 text-center d-flex flex-column justify-content-center" style="border-radius: 12px; cursor: pointer; min-width: 140px; {{ request('ikut_kelas') === '1' ? 'display: none !important;' : 'display: flex !important;' }}" id="cardJumlahPotensi" onclick="filterByLegendStatus('potensi')">
+                                    <div class="text-dark fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">JUMLAH POTENSI</div>
+                                    <div class="fw-bold mt-2" style="font-size: 1.4rem; color: #E0A800;" id="statJumlahPotensi">{{ $jumlahPotensi ?? 0 }}</div>
+                                </div>
                             </div>
 
                             <!-- Row 2: Legend (Simplified) -->
@@ -632,7 +708,7 @@
                                       {{ $ikutKelasVal === '1' ? 'style="display:none!important;"' : '' }}>
                                      <div class="legend-card-interactive d-flex align-items-center bg-white shadow-sm border" style="border-radius: 50px; min-width: auto; justify-content: center; padding: 10px 20px;" onclick="filterByLegendStatus('cold')">
                                          <div style="width: 14px; height: 14px; background: #ffffff; border: 1px solid #aaa; border-radius: 50%; margin-right: 10px; flex-shrink: 0;"></div>
-                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">Total Potensi Ikut Kelas</span>
+                                         <span class="fw-bold text-dark" style="font-size: 0.8rem; letter-spacing: 0.5px;">Cold</span>
                                      </div>
                                      <div class="fw-bold text-dark text-center" style="font-size: 1.2rem;" id="statCountCold">{{ $ikutKelasVal === '1' ? 0 : ($countCold ?? 0) }}</div>
                                  </div>
@@ -695,7 +771,7 @@
                     @else
                         <div class="stat-card-group mb-4">
                             <!-- Database Baru -->
-                            <div class="g-stat-card g-sc-cyan">
+                            <div class="g-stat-card g-sc-cyan" id="cardDatabaseBaruOther" style="cursor: pointer;" onclick="filterByLegendStatus('database_baru')">
                                 <div class="g-sc-content">
                                     <span class="g-sc-label">Database Baru</span>
                                     <span class="g-sc-value" id="statDatabaseBaru">{{ $databaseBaru }}</span>
@@ -705,7 +781,7 @@
                             </div>
 
                             <!-- Total Database -->
-                            <div class="g-stat-card g-sc-blue">
+                            <div class="g-stat-card g-sc-blue" id="cardTotalDatabaseOther" style="cursor: pointer;" onclick="filterByLegendStatus('total_database')">
                                 <div class="g-sc-content">
                                     <span class="g-sc-label">Total Database</span>
                                     <span class="g-sc-value" id="statTotalDatabase">{{ $totalDatabase }}</span>
@@ -785,11 +861,9 @@
                             <a href="#" class="btn btn-success mr-2" id="btnAddRow" onclick="createNewRow(event)">
                                 <i class="fa-solid fa-plus"></i> Tambah
                             </a>
-                            @if($userRole !== 'cs-mbc')
-                                <a href="{{ route('form.m1t', $slugName) }}" class="btn btn-success mr-2" target="_blank" style="background-color: #20c997; border-color: #20c997;">
-                                    <i class="fa-solid fa-link"></i> Tambah Via Link
-                                </a>
-                            @endif
+                            <a href="{{ route('form.m1t', $slugName) }}" class="btn btn-success mr-2" target="_blank" style="background-color: #20c997; border-color: #20c997;">
+                                <i class="fa-solid fa-link"></i> Tambah Via Link
+                            </a>
                         @endif
                         <button type="button" id="btnInteraksi"
                             class="btn btn-primary d-flex align-items-center gap-2 px-3 shadow-sm rounded-pill {{ (request('bulan') && request('tahun')) ? '' : 'd-none' }}"
@@ -1037,6 +1111,69 @@
                                     innerDiv.style.setProperty('transform', 'none', 'important');
                                 }
                             }
+                        }
+                    }
+
+                    // Highlight cardJumlahPotensi when currentStatus is 'potensi'
+                    const potensiEl = document.getElementById('cardJumlahPotensi');
+                    if (potensiEl) {
+                        if (currentStatus === 'potensi') {
+                            potensiEl.style.setProperty('background-color', '#fff9e6', 'important');
+                            potensiEl.style.setProperty('border', '2px solid #E0A800', 'important');
+                            potensiEl.style.setProperty('box-shadow', 'inset 0 0 10px rgba(224, 168, 0, 0.15), 0 4px 12px rgba(224, 168, 0, 0.2)', 'important');
+                        } else {
+                            potensiEl.style.setProperty('background-color', '#ffffff', 'important');
+                            potensiEl.style.setProperty('border', '1px solid #dee2e6', 'important');
+                            potensiEl.style.setProperty('box-shadow', 'none', 'important');
+                        }
+                    }
+
+                    // Highlight cardDatabaseBaru when currentStatus is 'database_baru'
+                    const dbBaruEl = document.getElementById('cardDatabaseBaru');
+                    if (dbBaruEl) {
+                        if (currentStatus === 'database_baru') {
+                            dbBaruEl.style.setProperty('box-shadow', 'inset 0 0 15px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(37, 121, 158, 0.3)', 'important');
+                            dbBaruEl.style.setProperty('background', 'linear-gradient(135deg, #16495f 0%, #1c5b76 100%)', 'important');
+                        } else {
+                            dbBaruEl.style.setProperty('box-shadow', 'none', 'important');
+                            dbBaruEl.style.setProperty('background', 'linear-gradient(135deg, #1d617e 0%, #25799E 100%)', 'important');
+                        }
+                    }
+
+                    // Highlight cardDatabaseBaruOther when currentStatus is 'database_baru'
+                    const dbBaruOtherEl = document.getElementById('cardDatabaseBaruOther');
+                    if (dbBaruOtherEl) {
+                        if (currentStatus === 'database_baru') {
+                            dbBaruOtherEl.style.setProperty('border', '2.5px solid #0aa2c0', 'important');
+                            dbBaruOtherEl.style.setProperty('box-shadow', '0 6px 18px rgba(10, 162, 192, 0.4)', 'important');
+                        } else {
+                            dbBaruOtherEl.style.setProperty('border', 'none', 'important');
+                            dbBaruOtherEl.style.setProperty('box-shadow', 'none', 'important');
+                        }
+                    }
+                    // Highlight cardTotalDatabase when currentStatus is 'total_database'
+                    const totalDbEl = document.getElementById('cardTotalDatabase');
+                    if (totalDbEl) {
+                        if (currentStatus === 'total_database') {
+                            totalDbEl.style.setProperty('background-color', '#eaf2f8', 'important');
+                            totalDbEl.style.setProperty('border', '2px solid #25799E', 'important');
+                            totalDbEl.style.setProperty('box-shadow', 'inset 0 0 10px rgba(37, 121, 158, 0.1), 0 4px 12px rgba(37, 121, 158, 0.2)', 'important');
+                        } else {
+                            totalDbEl.style.setProperty('background-color', '#ffffff', 'important');
+                            totalDbEl.style.setProperty('border', '1px solid #dee2e6', 'important');
+                            totalDbEl.style.setProperty('box-shadow', 'none', 'important');
+                        }
+                    }
+
+                    // Highlight cardTotalDatabaseOther when currentStatus is 'total_database'
+                    const totalDbOtherEl = document.getElementById('cardTotalDatabaseOther');
+                    if (totalDbOtherEl) {
+                        if (currentStatus === 'total_database') {
+                            totalDbOtherEl.style.setProperty('border', '2.5px solid #0056b3', 'important');
+                            totalDbOtherEl.style.setProperty('box-shadow', '0 6px 18px rgba(0, 86, 179, 0.4)', 'important');
+                        } else {
+                            totalDbOtherEl.style.setProperty('border', 'none', 'important');
+                            totalDbOtherEl.style.setProperty('box-shadow', 'none', 'important');
                         }
                     }
                 }
@@ -1364,7 +1501,7 @@
                                 <th style="min-width: 150px;">Nama & No.WA</th>
                                 <th style="width: 92.5px;">
                                     Sumber Leads <br>
-                                        <select id="filterSumber" class="form-control form-control-sm" style="font-size: 0.75rem;">
+                                        <select id="filterSumber" class="form-control form-control-sm" style="font-size: 0.75rem;" onchange="applyAllDatabaseFilters()">
                                             <option value="">-- Semua --</option>
                                             <option value="Ads" {{ request('sumber') == 'Ads' ? 'selected' : '' }}>Ads</option>
                                             <option value="Sosmed" {{ request('sumber') == 'Sosmed' ? 'selected' : '' }}>Sosmed</option>
@@ -2476,6 +2613,12 @@
             // Detect if M1T / Startup Muslim Indonesia
             let isM1T = kelasNama.toLowerCase().includes('m1t') || kelasNama.toLowerCase().includes('muslim');
             if (isM1T) {
+                // Wide Modal layout for M1T (Two Columns)
+                $('#modalZoomBantDialog').css('max-width', '800px');
+                $('#zoomBantZoomCol').removeClass('col-12').addClass('col-md-6 pr-md-3');
+                $('#zoomBantBantCol').removeClass('col-12').addClass('col-md-6 pl-md-3');
+                $('#bantHeader').removeClass('mt-4').addClass('mt-md-0');
+
                 $('#standardZoomSection').hide();
                 $('#m1tZoomSection').show();
 
@@ -2486,6 +2629,12 @@
                 $('#zoomM1tStatus').val($btn.attr('data-schedule-status') || 'scheduled');
                 $('#zoomM1tNotes').val($btn.attr('data-schedule-notes') || '');
             } else {
+                // Standard narrow Modal layout (Stacked)
+                $('#modalZoomBantDialog').css('max-width', '420px');
+                $('#zoomBantZoomCol').removeClass('col-md-6 pr-md-3').addClass('col-12');
+                $('#zoomBantBantCol').removeClass('col-md-6 pl-md-3').addClass('col-12');
+                $('#bantHeader').addClass('mt-4').removeClass('mt-md-0');
+
                 $('#standardZoomSection').show();
                 $('#m1tZoomSection').hide();
             }
@@ -3709,7 +3858,7 @@
      MODAL ZOOM & BANT (BAT)
      ============================================================ --}}
 <div class="modal fade" id="modalZoomBant" tabindex="-1" role="dialog" aria-labelledby="modalZoomBantLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+    <div class="modal-dialog modal-dialog-centered" id="modalZoomBantDialog" role="document" style="max-width: 420px; transition: max-width 0.3s ease;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important;">
             {{-- Header --}}
             <div class="modal-header border-0 pb-3" style="background: linear-gradient(135deg, #2D8CFF, #1570E0); color: #fff; padding: 16px 20px;">
@@ -3730,136 +3879,144 @@
             <div class="modal-body p-4 bg-light text-dark">
                 <input type="hidden" id="zoomBant_data_id">
                 
-                {{-- Standard Zoom Section --}}
-                <div id="standardZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center" style="gap: 12px;">
-                            <div class="d-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                <i class="fas fa-video" style="font-size: 1rem;"></i>
-                            </div>
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Ikut Zoom</span>
-                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Status keikutsertaan webinar Zoom</small>
+                <div class="row" id="zoomBantRowContainer">
+                    <!-- Kolom Kiri: Zoom Section -->
+                    <div id="zoomBantZoomCol" class="col-12">
+                        {{-- Standard Zoom Section --}}
+                        <div id="standardZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                    <div class="d-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                        <i class="fas fa-video" style="font-size: 1rem;"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Ikut Zoom</span>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Status keikutsertaan webinar Zoom</small>
+                                    </div>
+                                </div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="zoomBantIkutZoom"
+                                        onchange="saveZoomBantField('ikut_zoom', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="zoomBantIkutZoom" style="cursor: pointer;"></label>
+                                </div>
                             </div>
                         </div>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="zoomBantIkutZoom"
-                                onchange="saveZoomBantField('ikut_zoom', this.checked ? 1 : 0)">
-                            <label class="custom-control-label" for="zoomBantIkutZoom" style="cursor: pointer;"></label>
+
+                        {{-- M1T One-on-One Zoom Scheduling Section --}}
+                        <div id="m1tZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px; display: none; background: #f8f9fc; border: 1px dashed #2a5298 !important;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center mb-3" style="gap: 10px;">
+                                    <div class="d-flex align-items-center justify-content-center bg-gradient-info text-white rounded-circle shadow-sm" style="width: 32px; height: 32px; flex-shrink: 0; background: linear-gradient(45deg, #36b9cc, #1a8a99);">
+                                        <i class="fas fa-calendar-alt" style="font-size: 0.85rem;"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-weight-bold text-dark d-block" style="font-size: 0.85rem; line-height: 1.2;">Jadwal Zoom One-on-One</span>
+                                        <small class="text-muted d-block" style="font-size: 0.68rem; line-height: 1.2;">Jadwalkan Zoom khusus M1T</small>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden salesplan id -->
+                                <input type="hidden" id="zoomM1tSalesplanId">
+
+                                <!-- Date Time Picker -->
+                                <div class="form-group mb-2">
+                                    <label class="small font-weight-bold text-dark mb-1">Tanggal & Waktu Pertemuan</label>
+                                    <input type="datetime-local" class="form-control form-control-sm" id="zoomM1tDateTime" style="border-radius: 6px;" required>
+                                </div>
+
+                                <!-- Zoom Link Input -->
+                                <div class="form-group mb-2">
+                                    <label class="small font-weight-bold text-dark mb-1">Link Zoom Meeting</label>
+                                    <input type="url" class="form-control form-control-sm" id="zoomM1tLink" placeholder="https://zoom.us/j/..." style="border-radius: 6px;">
+                                </div>
+
+                                <!-- Status Schedule -->
+                                <div class="form-group mb-2">
+                                    <label class="small font-weight-bold text-dark mb-1">Status Penjadwalan</label>
+                                    <select class="form-control form-control-sm" id="zoomM1tStatus" style="border-radius: 6px; font-weight: 600;">
+                                        <option value="scheduled" class="text-primary">📅 Scheduled</option>
+                                        <option value="done" class="text-success">✅ Done / Sukses</option>
+                                        <option value="cancelled" class="text-danger">❌ Cancelled</option>
+                                    </select>
+                                </div>
+
+                                <!-- Notes / Tindak Lanjut -->
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold text-dark mb-1">Catatan / Tindak Lanjut</label>
+                                    <textarea class="form-control form-control-sm" id="zoomM1tNotes" rows="2" placeholder="Tulis hasil komunikasi/kesepakatan..." style="border-radius: 6px; font-size: 0.75rem;"></textarea>
+                                </div>
+
+                                <!-- Save button -->
+                                <button type="button" id="btnSaveZoomM1t" class="btn btn-primary btn-sm btn-block font-weight-bold py-2 shadow-sm border-0 text-white" style="border-radius: 8px; background: linear-gradient(45deg, #1e3c72, #2a5298);">
+                                    Simpan Jadwal Zoom
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {{-- M1T One-on-One Zoom Scheduling Section --}}
-                <div id="m1tZoomSection" class="card border-0 shadow-sm mb-3" style="border-radius: 12px; display: none; background: #f8f9fc; border: 1px dashed #2a5298 !important;">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center mb-3" style="gap: 10px;">
-                            <div class="d-flex align-items-center justify-content-center bg-gradient-info text-white rounded-circle shadow-sm" style="width: 32px; height: 32px; flex-shrink: 0; background: linear-gradient(45deg, #36b9cc, #1a8a99);">
-                                <i class="fas fa-calendar-alt" style="font-size: 0.85rem;"></i>
-                            </div>
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.85rem; line-height: 1.2;">Jadwal Zoom One-on-One</span>
-                                <small class="text-muted d-block" style="font-size: 0.68rem; line-height: 1.2;">Jadwalkan Zoom khusus M1T</small>
-                            </div>
-                        </div>
-
-                        <!-- Hidden salesplan id -->
-                        <input type="hidden" id="zoomM1tSalesplanId">
-
-                        <!-- Date Time Picker -->
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-dark mb-1">Tanggal & Waktu Pertemuan</label>
-                            <input type="datetime-local" class="form-control form-control-sm" id="zoomM1tDateTime" style="border-radius: 6px;" required>
-                        </div>
-
-                        <!-- Zoom Link Input -->
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-dark mb-1">Link Zoom Meeting</label>
-                            <input type="url" class="form-control form-control-sm" id="zoomM1tLink" placeholder="https://zoom.us/j/..." style="border-radius: 6px;">
-                        </div>
-
-                        <!-- Status Schedule -->
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-dark mb-1">Status Penjadwalan</label>
-                            <select class="form-control form-control-sm" id="zoomM1tStatus" style="border-radius: 6px; font-weight: 600;">
-                                <option value="scheduled" class="text-primary">📅 Scheduled</option>
-                                <option value="done" class="text-success">✅ Done / Sukses</option>
-                                <option value="cancelled" class="text-danger">❌ Cancelled</option>
-                            </select>
-                        </div>
-
-                        <!-- Notes / Tindak Lanjut -->
-                        <div class="form-group mb-3">
-                            <label class="small font-weight-bold text-dark mb-1">Catatan / Tindak Lanjut</label>
-                            <textarea class="form-control form-control-sm" id="zoomM1tNotes" rows="2" placeholder="Tulis hasil komunikasi/kesepakatan..." style="border-radius: 6px; font-size: 0.75rem;"></textarea>
-                        </div>
-
-                        <!-- Save button -->
-                        <button type="button" id="btnSaveZoomM1t" class="btn btn-primary btn-sm btn-block font-weight-bold py-2 shadow-sm border-0 text-white" style="border-radius: 8px; background: linear-gradient(45deg, #1e3c72, #2a5298);">
-                            Simpan Jadwal Zoom
-                        </button>
-                    </div>
-                </div>
-
-                {{-- BANT Section --}}
-                <h6 class="font-weight-bold text-uppercase text-secondary mb-3 mt-4" style="font-size: 0.7rem; letter-spacing: 1px;">Kualifikasi Prospek (BANT)</h6>
-                
-                {{-- Budget --}}
-                <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center" style="gap: 12px;">
-                            <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                <i class="fas fa-wallet" style="font-size: 0.95rem;"></i>
-                            </div>
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Budget (B)</span>
-                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Dana / Anggaran sesuai kriteria</small>
+                    <!-- Kolom Kanan: BANT Section -->
+                    <div id="zoomBantBantCol" class="col-12">
+                        {{-- BANT Section --}}
+                        <h6 id="bantHeader" class="font-weight-bold text-uppercase text-secondary mb-3 mt-4 mt-md-0" style="font-size: 0.7rem; letter-spacing: 1px;">Kualifikasi Prospek (BANT)</h6>
+                        
+                        {{-- Budget --}}
+                        <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
+                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                    <div class="d-flex align-items-center justify-content-center bg-success text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                        <i class="fas fa-wallet" style="font-size: 0.95rem;"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Budget (B)</span>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Dana / Anggaran sesuai kriteria</small>
+                                    </div>
+                                </div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="zoomBantBudget"
+                                        onchange="saveZoomBantField('bant_budget', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="zoomBantBudget" style="cursor: pointer;"></label>
+                                </div>
                             </div>
                         </div>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="zoomBantBudget"
-                                onchange="saveZoomBantField('bant_budget', this.checked ? 1 : 0)">
-                            <label class="custom-control-label" for="zoomBantBudget" style="cursor: pointer;"></label>
-                        </div>
-                    </div>
-                </div>
 
-                {{-- Authority --}}
-                <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center" style="gap: 12px;">
-                            <div class="d-flex align-items-center justify-content-center bg-info text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                <i class="fas fa-user-shield" style="font-size: 0.95rem;"></i>
-                            </div>
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Authority (A)</span>
-                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Pengambil keputusan utama</small>
+                        {{-- Authority --}}
+                        <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px;">
+                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                    <div class="d-flex align-items-center justify-content-center bg-info text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                        <i class="fas fa-user-shield" style="font-size: 0.95rem;"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Authority (A)</span>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Pengambil keputusan utama</small>
+                                    </div>
+                                </div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="zoomBantAuthority"
+                                        onchange="saveZoomBantField('bant_authority', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="zoomBantAuthority" style="cursor: pointer;"></label>
+                                </div>
                             </div>
                         </div>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="zoomBantAuthority"
-                                onchange="saveZoomBantField('bant_authority', this.checked ? 1 : 0)">
-                            <label class="custom-control-label" for="zoomBantAuthority" style="cursor: pointer;"></label>
-                        </div>
-                    </div>
-                </div>
 
-                {{-- Time --}}
-                <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center" style="gap: 12px;">
-                            <div class="d-flex align-items-center justify-content-center bg-warning text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                <i class="fas fa-clock" style="font-size: 0.95rem;"></i>
+                        {{-- Time --}}
+                        <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                    <div class="d-flex align-items-center justify-content-center bg-warning text-white rounded-circle shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                        <i class="fas fa-clock" style="font-size: 0.95rem;"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Time (T)</span>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Waktu / Timeline kebutuhan</small>
+                                    </div>
+                                </div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="zoomBantTime"
+                                        onchange="saveZoomBantField('bant_time', this.checked ? 1 : 0)">
+                                    <label class="custom-control-label" for="zoomBantTime" style="cursor: pointer;"></label>
+                                </div>
                             </div>
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 0.9rem; line-height: 1.2;">Time (T)</span>
-                                <small class="text-muted d-block" style="font-size: 0.72rem; line-height: 1.2;">Waktu / Timeline kebutuhan mendesak</small>
-                            </div>
-                        </div>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="zoomBantTime"
-                                onchange="saveZoomBantField('bant_time', this.checked ? 1 : 0)">
-                            <label class="custom-control-label" for="zoomBantTime" style="cursor: pointer;"></label>
                         </div>
                     </div>
                 </div>
@@ -4353,11 +4510,112 @@ function formatRupiah(input) {
     input.value = rupiah;
 }
 
+// Tracks and updates the legend counters in real-time when prospect status changes
+function adjustLegendCounts(oldStatus, newStatus) {
+    if (!oldStatus || !newStatus || oldStatus === newStatus) return;
+
+    const statusMap = {
+        'cold': 'statCountCold',
+        'tertarik': 'statCountTertarik',
+        'mau_transfer': 'statCountMauTransfer',
+        'sudah_transfer': 'statCountSudahTransfer',
+        'no': 'statCountNo'
+    };
+
+    // Decrement old status count
+    const oldId = statusMap[oldStatus];
+    if (oldId) {
+        const oldEl = document.getElementById(oldId);
+        if (oldEl) {
+            let val = parseInt(oldEl.innerText) || 0;
+            oldEl.innerText = Math.max(0, val - 1);
+        }
+    }
+
+    // Increment new status count
+    const newId = statusMap[newStatus];
+    if (newId) {
+        const newEl = document.getElementById(newId);
+        if (newEl) {
+            let val = parseInt(newEl.innerText) || 0;
+            newEl.innerText = val + 1;
+        }
+    }
+
+    // Update Jumlah Potensi if status changes from/to potential categories
+    // Potential categories: cold, tertarik, mau_transfer
+    const oldIsPotensi = ['cold', 'tertarik', 'mau_transfer'].includes(oldStatus);
+    const newIsPotensi = ['cold', 'tertarik', 'mau_transfer'].includes(newStatus);
+    
+    if (oldIsPotensi && !newIsPotensi) {
+        const potEl = document.getElementById('statJumlahPotensi');
+        if (potEl) {
+            let val = parseInt(potEl.innerText) || 0;
+            potEl.innerText = Math.max(0, val - 1);
+        }
+    } else if (!oldIsPotensi && newIsPotensi) {
+        const potEl = document.getElementById('statJumlahPotensi');
+        if (potEl) {
+            let val = parseInt(potEl.innerText) || 0;
+            potEl.innerText = val + 1;
+        }
+    }
+
+    // Update Total Belum/Sudah Ikut filter counts
+    const urlParams = new URLSearchParams(window.location.search);
+    const ikutKelas = urlParams.get('ikut_kelas');
+    
+    if (ikutKelas === '0') {
+        // Belum Ikut view (Total Belum Ikut includes all except sudah_transfer)
+        if (oldStatus !== 'sudah_transfer' && newStatus === 'sudah_transfer') {
+            const totEl = document.getElementById('statTotalFiltered');
+            if (totEl) {
+                let val = parseInt(totEl.innerText) || 0;
+                totEl.innerText = Math.max(0, val - 1);
+            }
+        } else if (oldStatus === 'sudah_transfer' && newStatus !== 'sudah_transfer') {
+            const totEl = document.getElementById('statTotalFiltered');
+            if (totEl) {
+                let val = parseInt(totEl.innerText) || 0;
+                totEl.innerText = val + 1;
+            }
+        }
+    } else if (ikutKelas === '1') {
+        // Sudah Ikut view (Total Sudah Ikut includes only sudah_transfer)
+        if (oldStatus !== 'sudah_transfer' && newStatus === 'sudah_transfer') {
+            const totEl = document.getElementById('statTotalFiltered');
+            if (totEl) {
+                let val = parseInt(totEl.innerText) || 0;
+                totEl.innerText = val + 1;
+            }
+        } else if (oldStatus === 'sudah_transfer' && newStatus !== 'sudah_transfer') {
+            const totEl = document.getElementById('statTotalFiltered');
+            if (totEl) {
+                let val = parseInt(totEl.innerText) || 0;
+                totEl.innerText = Math.max(0, val - 1);
+            }
+        }
+    }
+}
+
+// Delegate focus listener to keep track of the original status before the user changes it
+$(document).on('focus', '.status-direct-select, .inline-status-select', function() {
+    if ($(this).data('previous-val') === undefined) {
+        $(this).data('previous-val', this.value);
+    }
+});
+
 function updateStatusDirectTable(dataId, el) {
     var status = el.value;
     var name = el.dataset.nama || 'Peserta';
     var kelasNama = el.dataset.kelasNama || '';
     var isM1T = kelasNama.toUpperCase().includes('M1T') || kelasNama.toUpperCase().includes('MUSLIM INDONESIA');
+    
+    // Read and default previous status value
+    var oldStatus = $(el).data('previous-val');
+    if (oldStatus === undefined) {
+        oldStatus = 'cold';
+    }
     
     // Config warna sama dengan row.blade.php
     var statusConfig = {
@@ -4379,6 +4637,10 @@ function updateStatusDirectTable(dataId, el) {
     }).done(function(r) {
         if (r.success) {
             showDetailToast('Status diperbarui!');
+            
+            // Adjust legend counts in real-time without refresh
+            adjustLegendCounts(oldStatus, status);
+            $(el).data('previous-val', status);
             
             if (status === 'sudah_transfer') {
                 if (isM1T) {
@@ -4455,6 +4717,12 @@ function updateInlineStatusFromTable(selectEl) {
     var newStatus = selectEl.value;
     var isM1T = kelasNama.toUpperCase().includes('M1T') || kelasNama.toUpperCase().includes('MUSLIM INDONESIA');
     
+    // Read and default previous status value
+    var oldStatus = $(selectEl).data('previous-val');
+    if (oldStatus === undefined) {
+        oldStatus = 'cold';
+    }
+    
     var statusConfig = {
         'cold':           { bg: '#ffffff', text: '#6c757d' },
         'tertarik':       { bg: '#F2F527', text: '#000000' },
@@ -4477,6 +4745,10 @@ function updateInlineStatusFromTable(selectEl) {
         selectEl.style.opacity = '1';
         if (r.success) {
             showDetailToast('Status prospek berhasil diperbarui!');
+            
+            // Adjust legend counts in real-time without refresh
+            adjustLegendCounts(oldStatus, newStatus);
+            $(selectEl).data('previous-val', newStatus);
             
             // Sync status/badge styling in real-time
             var badge = selectEl.previousElementSibling;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORMULIR PENDAFTARAN PESERTA M1T CHAPTER</title>
+    <title>Form Pendaftaran & Penjadwalan Konsultasi Program M1T</title>
     <!-- Use Tailwind via CDN for quick styling 'mirip google form' or custom CSS. Let's use simple Bootstrap. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -120,18 +120,53 @@
 
         <div class="form-header">
             <h1>
-                FORMULIR PENDAFTARAN 
-                <!-- @if(strtolower($user->role) === 'chapter' && !empty($user->chapter))
-                    CHAPTER {{ strtoupper($user->chapter) }}
-                @else
-                    CHAPTER - {{ strtoupper($user->name) }}
-                @endif -->
+                Form Pendaftaran & Penjadwalan Konsultasi Program M1T
             </h1>
-            <p>Silakan isi form di bawah ini dengan data yang sebenarnya.</p>
+            <p>Supaya bisa membantu Anda Maksimal dan optimal mohon isi data dibawah ini terlebih dahulu</p>
             <p class="text-danger small">* Wajib</p>
         </div>
 
-        <div class="section-title">A. DATA DIRI</div>
+        @php
+            $csNames = ['Yasmin', 'Linda', 'Shafa'];
+            $isCsPusat = false;
+            foreach ($csNames as $csName) {
+                if (stripos($user->name, $csName) !== false) {
+                    $isCsPusat = true;
+                    break;
+                }
+            }
+        @endphp
+
+        @if($isCsPusat)
+        <div class="section-title">A. JADWAL SESI ZOOM</div>
+
+        <div class="card-question">
+            <div class="question-title">Pilih Tanggal Sesi Zoom : <span class="text-danger">*</span></div>
+            <input type="date" class="form-control" name="jadwal_zoom_tanggal" required>
+        </div>
+
+        <div class="card-question">
+            <div class="question-title">Pilih Jam Sesi Zoom : <span class="text-danger">*</span></div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="jadwal_zoom_jam" id="zoom2" value="10:00" required>
+                <label class="form-check-label" for="zoom2">Jam 10.00 - 11.00 WIB</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="jadwal_zoom_jam" id="zoom3" value="11:00" required>
+                <label class="form-check-label" for="zoom3">Jam 11.00 - 12.00 WIB</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="jadwal_zoom_jam" id="zoom4" value="13:00" required>
+                <label class="form-check-label" for="zoom4">Jam 13.00 - 14.00 WIB</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="jadwal_zoom_jam" id="zoom6" value="15:00" required>
+                <label class="form-check-label" for="zoom6">Jam 15.00 - 16.00 WIB</label>
+            </div>
+        </div>
+        @endif
+
+        <div class="section-title">B. DATA DIRI</div>
         
         <div class="card-question">
             <div class="question-title">1. Nama Lengkap <span class="text-danger">*</span></div>
@@ -166,7 +201,9 @@
             <input type="text" class="form-control" name="nama_usaha" required placeholder="Jawaban Anda">
         </div>
 
-        <div class="section-title">B. KONDISI BISNIS SAAT INI</div>
+
+
+        <div class="section-title">C. KONDISI BISNIS SAAT INI</div>
 
         <div class="card-question">
             <div class="question-title">5. Sudah berapa lama Anda menjalankan bisnis? <span class="text-danger">*</span></div>
@@ -231,7 +268,7 @@
             </div>
         </div>
 
-        <div class="section-title">C. MASALAH & KEBUTUHAN</div>
+        <div class="section-title">D. MASALAH & KEBUTUHAN</div>
 
         <div class="card-question">
             <div class="question-title">8. Tantangan utama dalam bisnis Anda saat ini: <span class="text-danger">*</span></div>
@@ -258,7 +295,7 @@
             </div>
         </div>
 
-        <div class="section-title">D. TARGET & AMBISI</div>
+        <div class="section-title">E. TARGET & AMBISI</div>
 
         <div class="card-question">
             <div class="question-title">9. Target utama Anda dalam 1 tahun ke depan: <span class="text-danger">*</span></div>
@@ -310,7 +347,7 @@
             </div>
         </div>
 
-        <div class="section-title">E. KESIAPAN & KOMITMEN</div>
+        <div class="section-title">F. KESIAPAN & KOMITMEN</div>
 
         <div class="card-question">
             <div class="question-title">11. Jika ada program pendampingan bisnis yang tepat, posisi Anda saat ini: <span class="text-danger">*</span></div>
@@ -397,6 +434,8 @@ apakah anda tertarik, untuk mendengarkan informasinya. : <span class="text-dange
                 <label class="form-check-label" for="coach3">Sudah Kenal</label>
             </div>
         </div>
+
+
 
         <div class="card-question text-center bg-light d-none">
             <h5 class="fw-bold mb-0">RIWAYAT FOLLOW UP</h5>

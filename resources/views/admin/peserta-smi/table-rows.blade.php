@@ -211,10 +211,18 @@
                         $isVisible = false;
                     }
                     $selectedMonths = [];
-                    if ($item->salesPlan && is_array($item->salesPlan->selected_months)) {
-                        $selectedMonths = $item->salesPlan->selected_months;
-                    } else if ($item->salesPlan && is_string($item->salesPlan->selected_months)) {
-                        $selectedMonths = json_decode($item->salesPlan->selected_months, true) ?? [];
+                    $excludedMonths = [];
+                    if ($item->salesPlan) {
+                        $sel = $item->salesPlan->selected_months;
+                        if (is_array($sel)) {
+                            $selectedMonths = $sel;
+                        } else if (is_string($sel)) {
+                            $selectedMonths = json_decode($sel, true) ?? [];
+                        }
+                    }
+                    if (isset($selectedMonths['excluded_months'])) {
+                        $excludedMonths = $selectedMonths['excluded_months'];
+                        unset($selectedMonths['excluded_months']);
                     }
                     $isPlanChecked = false;
                     $effectiveDate = null;
@@ -240,6 +248,11 @@
                     // [USER_REQUEST] Khusus tahun 2026: checklist biru mulai dari April (bulan 4)
                     // Sembunyikan biru untuk bulan Jan/Feb/Mar 2026
                     if ($filterYear == 2026 && $i <= 3) {
+                        $isPlanChecked = false;
+                    }
+
+                    // Exclude from plan checklist if explicitly unchecked by the user
+                    if (isset($excludedMonths[$filterYear]) && in_array((int) $i, $excludedMonths[$filterYear])) {
                         $isPlanChecked = false;
                     }
                 @endphp
