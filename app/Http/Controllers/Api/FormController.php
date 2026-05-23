@@ -79,7 +79,7 @@ class FormController extends Controller
             }
 
             // 🔥 simpan data
-            Data::create([
+            $data = Data::create([
                 'nama' => $request->nama ?? '-',
                 'no_wa' => $request->no_wa ?? '-',
                 'nama_bisnis' => $request->nama_bisnis ?? '-',
@@ -94,6 +94,36 @@ class FormController extends Controller
 
                 'potensi' => 'ALL',
             ]);
+
+            // 🔥 otomatis simpan jadwal zoom jika dikirim dari Google Form
+            $dateZoom = $request->pilih_tanggal_sesi_zoom ?? $request->tanggal_zoom ?? $request->tanggal_sesi_zoom;
+            $timeZoom = $request->pilih_jam_sesi_zoom ?? $request->jam_zoom ?? $request->jam_sesi_zoom;
+
+            if (!empty($dateZoom) && !empty($timeZoom)) {
+                $startTime = '09:00:00';
+                if (stripos($timeZoom, '9.00') !== false || stripos($timeZoom, '09.00') !== false || stripos($timeZoom, '09:00') !== false) {
+                    $startTime = '09:00:00';
+                } elseif (stripos($timeZoom, '11.00') !== false || stripos($timeZoom, '11:00') !== false) {
+                    $startTime = '11:00:00';
+                } elseif (stripos($timeZoom, '13.00') !== false || stripos($timeZoom, '13:00') !== false) {
+                    $startTime = '13:00:00';
+                } elseif (stripos($timeZoom, '15.00') !== false || stripos($timeZoom, '15:00') !== false) {
+                    $startTime = '15:00:00';
+                }
+                
+                try {
+                    $scheduledAt = \Carbon\Carbon::parse($dateZoom . ' ' . $startTime);
+                    
+                    $schedule = new \App\Models\ZoomSchedule();
+                    $schedule->data_id = $data->id;
+                    $schedule->scheduled_at = $scheduledAt;
+                    $schedule->status = 'scheduled';
+                    $schedule->notes = 'Jadwal otomatis dari Google Form';
+                    $schedule->save();
+                } catch (\Exception $ex) {
+                    \Log::error('ZOOM AUTOSYNC ERROR: ' . $ex->getMessage());
+                }
+            }
 
             return response()->json(['status' => 'success']);
 

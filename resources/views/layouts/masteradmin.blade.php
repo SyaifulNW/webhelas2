@@ -1027,6 +1027,24 @@
                                                 @endif
                                             </a>
                                         </li>
+
+                                         {{-- PENARIKAN DOMPET (KHUSUS LINDA) --}}
+                                         @if(stripos($userName, 'Linda') !== false)
+                                             @php
+                                                 $pendingWalletWD = \App\Models\WalletTransaction::where('type', 'withdrawal')->where('status', 'pending')->count();
+                                             @endphp
+                                             <li class="nav-item {{ request()->routeIs('admin.wallet.*') ? 'active' : '' }}">
+                                                 <a class="nav-link d-flex align-items-center" href="{{ route('admin.wallet.index') }}" title="PENARIKAN DOMPET">
+                                                     <i class="fas fa-fw fa-wallet mr-2"></i>
+                                                     <div class="d-flex align-items-center">
+                                                         <span><strong>PENARIKAN DOMPET</strong></span>
+                                                         @if($pendingWalletWD > 0)
+                                                             <span class="badge badge-danger badge-pulse ml-2">{{ $pendingWalletWD }}</span>
+                                                         @endif
+                                                     </div>
+                                                 </a>
+                                             </li>
+                                         @endif
                                     @elseif(in_array($userName, ['Shafa Zahra']))
                                         <li class="nav-item {{ request()->routeIs('peserta-smi.index') ? 'active' : '' }}">
                                             <a class="nav-link" href="{{ route('peserta-smi.index') }}" title="Peserta M1T">
@@ -1224,23 +1242,7 @@
 
 
 
-                        {{-- 8. DOMPET (MANAJEMEN) --}}
-                        @if(($userRole === 'administrator' && false) || $userName === 'Linda') {{-- Hidden for Admin, keeping for Linda --}}
-                        @php
-                            $pendingWalletWD = \App\Models\WalletTransaction::where('type', 'withdrawal')->where('status', 'pending')->count();
-                        @endphp
-                        <li class="nav-item {{ request()->routeIs('admin.wallet.*') ? 'active' : '' }}">
-                            <a class="nav-link d-flex align-items-center" href="{{ route('admin.wallet.index') }}" title="PENARIKAN DOMPET">
-                                <i class="fas fa-fw fa-wallet mr-2"></i>
-                                <div class="d-flex align-items-center">
-                                    <span><strong>PENARIKAN DOMPET</strong></span>
-                                    @if($pendingWalletWD > 0)
-                                        <span class="badge badge-danger badge-pulse ml-2">{{ $pendingWalletWD }}</span>
-                                    @endif
-                                </div>
-                            </a>
-                        </li>
-                        @endif
+
 
                         {{-- Penilaian Karyawan --}}
                         @if(\App\Models\Menu::isActive('penilaian_karyawan') && $userRole !== 'administrator')

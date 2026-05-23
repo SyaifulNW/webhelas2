@@ -134,7 +134,7 @@ class ZoomScheduleController extends Controller
         $user = Auth::user();
         $isAdmin = in_array(strtolower($user->role), ['administrator', 'manager', 'operasional']);
 
-        $query = ZoomSchedule::with(['data', 'cs']);
+        $query = ZoomSchedule::with(['data.kelas', 'cs']);
 
         // Date range filters from FullCalendar
         if ($request->has('start')) {
@@ -181,7 +181,16 @@ class ZoomScheduleController extends Controller
                     'zoom_link' => $schedule->zoom_link,
                     'status' => ucfirst($schedule->status),
                     'notes' => $schedule->notes ?: '-',
-                    'time' => $schedule->scheduled_at->format('H:i')
+                    'time' => $schedule->scheduled_at->format('H:i'),
+                    'data_id' => $schedule->data_id,
+                    'salesplan_id' => $schedule->salesplan_id,
+                    'no_wa' => $schedule->data ? $schedule->data->no_wa : '',
+                    'kelas_nama' => $schedule->data ? ($schedule->data->kelas->nama_kelas ?? '') : '',
+                    'ikut_zoom' => $schedule->data ? $schedule->data->ikut_zoom : 0,
+                    'bant_budget' => $schedule->data ? $schedule->data->bant_budget : 0,
+                    'bant_authority' => $schedule->data ? $schedule->data->bant_authority : 0,
+                    'bant_time' => $schedule->data ? $schedule->data->bant_time : 0,
+                    'scheduled_at' => $schedule->scheduled_at->toIso8601String()
                 ]
             ];
         }

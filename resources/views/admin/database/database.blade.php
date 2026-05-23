@@ -50,60 +50,70 @@
 
         /* Hover borders for top cards */
         #cardDatabaseBaru {
-            border: 2px solid transparent !important;
+            border: 3px solid #000 !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         #cardDatabaseBaru:hover {
-            border: 2px solid #54b2d3 !important;
+            border: 3px solid #54b2d3 !important;
         }
         #cardTotalDatabase {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         #cardTotalDatabase:hover {
-            border: 2px solid #25799E !important;
+            border: 3px solid #25799E !important;
+        }
+        #cardFiltersDatabase {
+            border: 3px solid #000 !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        #cardFiltersDatabase:hover {
+            border: 3px solid #25799E !important;
         }
         #cardJumlahPotensi {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         #cardJumlahPotensi:hover {
-            border: 2px solid #E0A800 !important;
+            border: 3px solid #E0A800 !important;
         }
 
         /* Hover borders for bottom legend cards */
         #legendCold .legend-card-interactive {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
         }
         #legendCold .legend-card-interactive:hover {
-            border: 2px solid #6c757d !important;
+            border: 3px solid #6c757d !important;
         }
         #legendTertarik .legend-card-interactive {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
         }
         #legendTertarik .legend-card-interactive:hover {
-            border: 2px solid #e0b400 !important;
+            border: 3px solid #e0b400 !important;
         }
         #legendMauTransfer .legend-card-interactive {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
         }
         #legendMauTransfer .legend-card-interactive:hover {
-            border: 2px solid #28a745 !important;
+            border: 3px solid #28a745 !important;
         }
         #legendSudahTransfer .legend-card-interactive {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
         }
         #legendSudahTransfer .legend-card-interactive:hover {
-            border: 2px solid #007bff !important;
+            border: 3px solid #007bff !important;
         }
         #legendNo .legend-card-interactive {
-            border: 2px solid #dee2e6 !important;
+            border: 3px solid #000 !important;
         }
         #legendNo .legend-card-interactive:hover {
-            border: 2px solid #dc3545 !important;
+            border: 3px solid #dc3545 !important;
         }
         #legendTotal .legend-card-interactive {
-            border: 2px solid transparent !important;
+            border: 3px solid #000 !important;
         }
         #legendTotal .legend-card-interactive:hover {
-            border: 2px solid #25799E !important;
+            border: 3px solid #25799E !important;
         }
 
         .legend-card-interactive {
@@ -637,7 +647,7 @@
 
 
                                 {{-- Filters & Search (Integrated Style) --}}
-                                <div class="d-flex align-items-end flex-wrap gap-3 p-3 bg-white shadow-sm border" style="border-radius: 12px;">
+                                <div class="d-flex align-items-end flex-wrap gap-3 p-3 bg-white shadow-sm" id="cardFiltersDatabase" style="border-radius: 12px;">
                                     {{-- Status Ikut Kelas --}}
                                     <div class="flex-column d-flex" style="gap: 4px;" id="filterIkutKelasContainer">
                                         <label class="text-dark fw-bold mb-0 ml-1" style="font-size: 0.75rem; text-transform: uppercase;">Status Ikut Kelas</label>
@@ -870,6 +880,12 @@
                             onclick="exportPdfInteraksi()"
                             style="background: linear-gradient(45deg, #1d4ed8, #2563eb); border: none; font-weight: 600;">
                             <i class="fas fa-file-pdf"></i> Follow Up
+                        </button>
+                        
+                        <button type="button" id="btnLihatJadwalZoomHariIni"
+                            class="btn btn-info d-flex align-items-center gap-2 px-3 shadow-sm rounded-pill ml-2"
+                            style="background: linear-gradient(45deg, #0dcaf0, #0bacce); border: none; font-weight: 600; color: #fff;">
+                            <i class="fas fa-calendar-day"></i> Lihat Jadwal Zoom Hari Ini
                         </button>
                         
                         @if(in_array($userRole, ['chapter', 'reseller']) || (request('view_type') == 'chapter' && $userRole == 'administrator'))
@@ -2603,7 +2619,11 @@
             $('#zoomBantNoWa').text(noWa);
 
             if (kelasNama) {
-                $('#zoomBantKelas').text(kelasNama).show();
+                let displayKelas = kelasNama;
+                if (kelasNama.toLowerCase().includes('muslim indonesia')) {
+                    displayKelas = 'M1T';
+                }
+                $('#zoomBantKelas').text(displayKelas).show();
                 $('#zoomBantKelasPrefix').show();
             } else {
                 $('#zoomBantKelas').text('').hide();
@@ -2623,8 +2643,30 @@
                 $('#m1tZoomSection').show();
 
                 // Populate M1T form
+                let scheduleDateRaw = $btn.attr('data-schedule-date') || '';
+                if (scheduleDateRaw) {
+                    let datePart = scheduleDateRaw.substring(0, 10);
+                    let timePart = scheduleDateRaw.substring(11, 16);
+                    
+                    $('#zoomM1tDate').val(datePart);
+                    if (timePart.startsWith('09') || timePart.startsWith('9')) {
+                        $('#zoomM1tSession').val('09:00');
+                    } else if (timePart.startsWith('11')) {
+                        $('#zoomM1tSession').val('11:00');
+                    } else if (timePart.startsWith('13') || timePart.startsWith('1')) {
+                        $('#zoomM1tSession').val('13:00');
+                    } else if (timePart.startsWith('15') || timePart.startsWith('3')) {
+                        $('#zoomM1tSession').val('15:00');
+                    } else {
+                        $('#zoomM1tSession').val('');
+                    }
+                } else {
+                    $('#zoomM1tDate').val('');
+                    $('#zoomM1tSession').val('');
+                }
+                
                 $('#zoomM1tSalesplanId').val($btn.data('salesplan-id') || '');
-                $('#zoomM1tDateTime').val($btn.attr('data-schedule-date') || '');
+                $('#zoomM1tDateTime').val(scheduleDateRaw);
                 $('#zoomM1tLink').val($btn.attr('data-schedule-link') || '');
                 $('#zoomM1tStatus').val($btn.attr('data-schedule-status') || 'scheduled');
                 $('#zoomM1tNotes').val($btn.attr('data-schedule-notes') || '');
@@ -2658,15 +2700,23 @@
         $(document).on('click', '#btnSaveZoomM1t', function () {
             let dataId = $('#zoomBant_data_id').val();
             let salesplanId = $('#zoomM1tSalesplanId').val();
-            let scheduledAt = $('#zoomM1tDateTime').val();
-            let zoomLink = $('#zoomM1tLink').val();
-            let status = $('#zoomM1tStatus').val();
-            let notes = $('#zoomM1tNotes').val();
-
-            if (!scheduledAt) {
-                alert('Silakan pilih Tanggal dan Waktu Pertemuan terlebih dahulu.');
+            
+            let dateVal = $('#zoomM1tDate').val();
+            let sessionVal = $('#zoomM1tSession').val();
+            
+            if (!dateVal) {
+                alert('Silakan pilih Tanggal Sesi Zoom terlebih dahulu.');
                 return;
             }
+            if (!sessionVal) {
+                alert('Silakan pilih Jam Sesi Zoom terlebih dahulu.');
+                return;
+            }
+            
+            let scheduledAt = dateVal + ' ' + sessionVal + ':00';
+            let zoomLink = $('#zoomM1tLink').val() || '';
+            let status = $('#zoomM1tStatus').val() || 'scheduled';
+            let notes = $('#zoomM1tNotes').val();
 
             let $btn = $(this);
             $btn.prop('disabled', true).text('Menyimpan...');
@@ -3854,6 +3904,41 @@
     </div>
 </div>
 
+<!-- MODAL JADWAL ZOOM HARI INI -->
+<div class="modal fade" id="modalJadwalZoomHariIni" tabindex="-1" role="dialog" aria-labelledby="modalJadwalZoomHariIniLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 600px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important;">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(45deg, #1e3c72, #2a5298);">
+                <h5 class="modal-title font-weight-bold mb-0 d-flex align-items-center" id="modalJadwalZoomHariIniLabel" style="font-size: 1.15rem; letter-spacing: 0.5px;">
+                    <i class="fas fa-calendar-day mr-2"></i> Jadwal Zoom Hari Ini ({{ \Carbon\Carbon::today()->translatedFormat('d F Y') }})
+                </h5>
+                <button type="button" class="close text-white opacity-80 hover-opacity-100" data-dismiss="modal" aria-label="Close" style="outline: none; background: transparent; border: none;">
+                    <span aria-hidden="true" style="font-size: 1.5rem; color: #fff;">&times;</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-light" style="max-height: 450px; overflow-y: auto;">
+                <div id="loaderJadwalZoom" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-2 small font-weight-bold">Mengambil jadwal...</p>
+                </div>
+                <div id="containerJadwalZoomList" style="display: none;">
+                    <!-- List of Zoom schedules will go here -->
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 bg-white p-3 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary btn-sm px-4 font-weight-bold shadow-sm" data-dismiss="modal" style="border-radius: 8px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- ============================================================
      MODAL ZOOM & BANT (BAT)
      ============================================================ --}}
@@ -3918,25 +4003,26 @@
                                 <!-- Hidden salesplan id -->
                                 <input type="hidden" id="zoomM1tSalesplanId">
 
-                                <!-- Date Time Picker -->
+                                <!-- Hidden fields to ensure system compatibility -->
+                                <input type="hidden" id="zoomM1tDateTime">
+                                <input type="hidden" id="zoomM1tLink" value="">
+                                <input type="hidden" id="zoomM1tStatus" value="scheduled">
+
+                                <!-- Date Picker -->
                                 <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-dark mb-1">Tanggal & Waktu Pertemuan</label>
-                                    <input type="datetime-local" class="form-control form-control-sm" id="zoomM1tDateTime" style="border-radius: 6px;" required>
+                                    <label class="small font-weight-bold text-dark mb-1">Pilih Tanggal Sesi Zoom</label>
+                                    <input type="date" class="form-control form-control-sm" id="zoomM1tDate" style="border-radius: 6px;" required>
                                 </div>
 
-                                <!-- Zoom Link Input -->
+                                <!-- Session Picker -->
                                 <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-dark mb-1">Link Zoom Meeting</label>
-                                    <input type="url" class="form-control form-control-sm" id="zoomM1tLink" placeholder="https://zoom.us/j/..." style="border-radius: 6px;">
-                                </div>
-
-                                <!-- Status Schedule -->
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-dark mb-1">Status Penjadwalan</label>
-                                    <select class="form-control form-control-sm" id="zoomM1tStatus" style="border-radius: 6px; font-weight: 600;">
-                                        <option value="scheduled" class="text-primary">📅 Scheduled</option>
-                                        <option value="done" class="text-success">✅ Done / Sukses</option>
-                                        <option value="cancelled" class="text-danger">❌ Cancelled</option>
+                                    <label class="small font-weight-bold text-dark mb-1">Pilih Jam Sesi Zoom</label>
+                                    <select class="form-control form-control-sm" id="zoomM1tSession" style="border-radius: 6px; font-weight: 600;" required>
+                                        <option value="">-- Pilih Sesi --</option>
+                                        <option value="09:00">Jam 9.00 - 10.00 WIB</option>
+                                        <option value="11:00">Jam 11.00 - 12.00 WIB</option>
+                                        <option value="13:00">Jam 13.00 - 14.00 WIB</option>
+                                        <option value="15:00">Jam 15.00 - 16.00 WIB</option>
                                     </select>
                                 </div>
 
@@ -5042,5 +5128,120 @@ function handleDetailSimpan() {
         }
     }
 
+        // Handler for showing Today's Zoom Schedule Modal
+        $(document).on('click', '#btnLihatJadwalZoomHariIni', function () {
+            $('#modalJadwalZoomHariIni').modal('show');
+            $('#loaderJadwalZoom').show();
+            $('#containerJadwalZoomList').hide();
+            
+            // Get today's local date string YYYY-MM-DD
+            let now = new Date();
+            let year = now.getFullYear();
+            let month = String(now.getMonth() + 1).padStart(2, '0');
+            let day = String(now.getDate()).padStart(2, '0');
+            let todayStr = `${year}-${month}-${day}`;
+            
+            $.get('{{ route("zoom-schedule.events") }}', { 
+                start: todayStr + ' 00:00:00', 
+                end: todayStr + ' 23:59:59' 
+            }).done(function (events) {
+                let html = '';
+                if (!events || events.length === 0) {
+                    html = `<div class="text-center py-4">
+                                <i class="far fa-calendar-times text-muted mb-2" style="font-size: 2.5rem;"></i>
+                                <p class="text-muted font-weight-bold mb-0">Tidak ada jadwal Zoom untuk hari ini.</p>
+                            </div>`;
+                } else {
+                    // Sort events by time ascending
+                    events.sort((a, b) => {
+                        let aTime = a.extendedProps ? (a.extendedProps.time || '') : '';
+                        let bTime = b.extendedProps ? (b.extendedProps.time || '') : '';
+                        return aTime.localeCompare(bTime);
+                    });
+                    
+                    html = `<div class="d-flex flex-column" style="gap: 12px;">`;
+                    events.forEach(function(ev) {
+                        let props = ev.extendedProps || {};
+                        let pName = props.participant || 'Umum';
+                        let csName = props.cs || 'Unknown CS';
+                        let time = props.time || '-';
+                        let status = props.status || 'Scheduled';
+                        let notes = props.notes || '-';
+                        
+                        let statusBadge = '';
+                        if (status.toLowerCase() === 'done') {
+                            statusBadge = '<span class="badge badge-success px-2 py-1 rounded-pill">Done</span>';
+                        } else if (status.toLowerCase() === 'cancelled') {
+                            statusBadge = '<span class="badge badge-danger px-2 py-1 rounded-pill">Cancelled</span>';
+                        } else {
+                            statusBadge = '<span class="badge badge-primary px-2 py-1 rounded-pill">Scheduled</span>';
+                        }
+                        
+                        let rescheduleBtn = '';
+                        if (props.data_id) {
+                            rescheduleBtn = `
+                                <button class="btn btn-xs btn-outline-warning mt-2 px-2 py-0 font-weight-bold btn-reschedule-zoom-direct btn-zoom-bant d-block ml-auto" 
+                                    style="font-size: 0.68rem; border-radius: 4px;"
+                                    data-id="${props.data_id}"
+                                    data-nama="${pName}"
+                                    data-kelas-nama="${props.kelas_nama || 'M1T'}"
+                                    data-no-wa="${props.no_wa || ''}"
+                                    data-can-edit="1"
+                                    data-salesplan-id="${props.salesplan_id || ''}"
+                                    data-ikut-zoom="${props.ikut_zoom || '0'}"
+                                    data-bant-budget="${props.bant_budget || '0'}"
+                                    data-bant-authority="${props.bant_authority || '0'}"
+                                    data-bant-time="${props.bant_time || '0'}"
+                                    data-schedule-date="${props.scheduled_at || ''}"
+                                    data-schedule-link="${props.zoom_link || ''}"
+                                    data-schedule-status="${status.toLowerCase()}"
+                                    data-schedule-notes="${notes === '-' ? '' : notes}"
+                                >
+                                    <i class="fas fa-sync mr-1"></i>Reschedule
+                                </button>
+                            `;
+                        }
+                        
+                        html += `
+                            <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px; border-left: 5px solid #2a5298 !important;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2" style="gap: 10px;">
+                                        <div>
+                                            <span class="font-weight-bold text-dark d-block" style="font-size: 0.95rem;">${pName}</span>
+                                            <small class="text-muted font-weight-bold">CS: ${csName}</small>
+                                        </div>
+                                        <div class="text-right" style="flex-shrink: 0;">
+                                            <span class="font-weight-bold text-primary d-block mb-1" style="font-size: 0.85rem;"><i class="far fa-clock mr-1"></i>${time} WIB</span>
+                                            ${statusBadge}
+                                            ${rescheduleBtn}
+                                        </div>
+                                    </div>
+                                    <div class="bg-light p-2 rounded" style="font-size: 0.78rem;">
+                                        <span class="font-weight-bold text-secondary d-block mb-1">Catatan:</span>
+                                        <p class="text-dark mb-0" style="white-space: pre-wrap;">${notes}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+                $('#containerJadwalZoomList').html(html).show();
+                $('#loaderJadwalZoom').hide();
+            }).fail(function () {
+                $('#containerJadwalZoomList').html(`
+                    <div class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle mb-2" style="font-size: 2.5rem;"></i>
+                        <p class="font-weight-bold mb-0">Gagal memuat jadwal Zoom hari ini.</p>
+                    </div>
+                `).show();
+                $('#loaderJadwalZoom').hide();
+            });
+        });
+
+        // Close Today's Zoom Modal when triggering Reschedule
+        $(document).on('click', '.btn-reschedule-zoom-direct', function () {
+            $('#modalJadwalZoomHariIni').modal('hide');
+        });
 </script>
 @endsection
