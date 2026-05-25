@@ -139,7 +139,7 @@
                         data-field="situasi_bisnis" style="outline: none;">{{ $item->situasi_bisnis }}</div>
                 </div>
                 @if(strlen($item->situasi_bisnis ?? '') > 100)
-                    <a href="javascript:void(0)" class="btn-read-more small mt-1 d-inline-block">{{ $userRole === 'chapter' ? 'Baca Harapan' : 'Baca Situasi' }}</a>
+                    <a href="javascript:void(0)" class="btn-read-more small mt-1 d-inline-block">Baca Selengkapnya</a>
                 @endif
             </div>
             

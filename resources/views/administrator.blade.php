@@ -5,7 +5,7 @@
 
 <div class="container-fluid px-2 pb-5">
     <h3 class="mb-4 py-3 fw-bold text-dark text-center" style="letter-spacing: 2px;">
-        <i class="fas fa-chart-line me-2 text-primary"></i> DASHBOARD ADMINISTRATOR HELAS CORPORATION
+        <i class="fas fa-chart-line me-2 text-primary"></i> DASHBOARD CEO HELAS CORPORATION
     </h3>
 
     <ul class="nav nav-tabs border-0 mt-2 mb-0 d-flex flex-wrap gap-0 justify-content-center px-4" id="adminDashboardTabs" role="tablist">
@@ -81,7 +81,18 @@
         
         <!-- SDM -->
         <div class="tab-pane fade" id="sdm" role="tabpanel" aria-labelledby="sdm-tab">
-            <iframe data-src="{{ route('hr') }}?embed=true" style="width:100%; height:950px; border:none; border-radius: 0 0 10px 10px;" onload="resizeIframe(this); hideLoading();"></iframe>
+            <div class="sub-nav-container d-flex gap-2 p-3 bg-white border-bottom flex-wrap" style="border-radius: 10px 10px 0 0;">
+                <button class="btn sub-tab-btn btn-karyawan active-sub" onclick="switchSdmSub(this, '{{ route('hr') }}?section=karyawan&embed=true')">
+                    <i class="fas fa-users me-1"></i> Data Karyawan
+                </button>
+                <button class="btn sub-tab-btn btn-absensi" onclick="switchSdmSub(this, '{{ route('hr') }}?section=absensi&embed=true')">
+                    <i class="fas fa-calendar-check me-1"></i> Absensi & Izin
+                </button>
+                <button class="btn sub-tab-btn btn-kpi" onclick="switchSdmSub(this, '{{ route('admin.penilaian-cs.index') }}?embed=true')">
+                    <i class="fas fa-star me-1"></i> Penilaian KPI
+                </button>
+            </div>
+            <iframe id="iframe-sdm" data-src="{{ route('hr') }}?section=karyawan&embed=true" style="width:100%; height:950px; border:none; border-radius: 0 0 10px 10px;" onload="resizeIframe(this); hideLoading();"></iframe>
         </div>
     </div>
 </div>
@@ -234,6 +245,55 @@
         transform: translateY(-2px);
     }
 
+    /* SDM Sub-buttons color mappings matching the premium card designs */
+    .btn-overview { border-color: #28a745 !important; color: #28a745 !important; }
+    .btn-overview:hover, .btn-overview.active-sub {
+        background: #28a745 !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-karyawan { border-color: #1cc88a !important; color: #1cc88a !important; }
+    .btn-karyawan:hover, .btn-karyawan.active-sub {
+        background: #1cc88a !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(28, 200, 138, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-absensi { border-color: #36b9cc !important; color: #36b9cc !important; }
+    .btn-absensi:hover, .btn-absensi.active-sub {
+        background: #36b9cc !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(54, 185, 204, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-lembur { border-color: #f6c23e !important; color: #f6c23e !important; }
+    .btn-lembur:hover, .btn-lembur.active-sub {
+        background: #f6c23e !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(246, 194, 62, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-kpi { border-color: #4e73df !important; color: #4e73df !important; }
+    .btn-kpi:hover, .btn-kpi.active-sub {
+        background: #4e73df !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(78, 115, 223, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-payroll { border-color: #e74a3b !important; color: #e74a3b !important; }
+    .btn-payroll:hover, .btn-payroll.active-sub {
+        background: #e74a3b !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(231, 74, 59, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
     /* Ensure no scrollbar appears around iframes unnecessarily */
     iframe {
         display: block;
@@ -245,12 +305,16 @@
 <script>
     function switchKeuanganSub(btn, url) {
         showLoading();
-        // Update active class
-        document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active-sub'));
+        document.querySelectorAll('#keuangan .sub-tab-btn').forEach(b => b.classList.remove('active-sub'));
         btn.classList.add('active-sub');
-        
-        // Update iframe source
         document.getElementById('iframe-keuangan').src = url;
+    }
+
+    function switchSdmSub(btn, url) {
+        showLoading();
+        document.querySelectorAll('#sdm .sub-tab-btn').forEach(b => b.classList.remove('active-sub'));
+        btn.classList.add('active-sub');
+        document.getElementById('iframe-sdm').src = url;
     }
 
     function showLoading() {

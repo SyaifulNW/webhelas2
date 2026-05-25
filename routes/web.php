@@ -46,6 +46,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+
 Route::get('/form-m1t/{identifier}', [DataController::class, 'formM1t'])->name('form.m1t');
 Route::post('/form-m1t/store', [DataController::class, 'storeFormM1t'])->name('form.m1t.store');
 
@@ -174,6 +175,7 @@ Route::middleware(['auth'])->group(function () {
         // Database / Prospek
         Route::get('database/export-riwayat-pdf', [DataController::class, 'exportPdfInteraksi'])->name('database.export-pdf-interaksi');
         Route::prefix('database')->name('database.')->group(function () {
+            Route::get('/realtime-count', [DataController::class, 'getRealtimeCount'])->name('realtime-count');
             Route::get('/', [DataController::class, 'index'])->name('database');
             Route::get('/create', [DataController::class, 'create'])->name('create');
             Route::post('/store', [DataController::class, 'store'])->name('store');
@@ -208,6 +210,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/update-kelas', [AlumniController::class, 'updateKelas'])->name('update-kelas');
             Route::post('/to-salesplan/{id}', [AlumniController::class, 'toSalesplan'])->name('toSalesplan');
         });
+
+        // Unified Data Peserta (MBC & M1T)
+        Route::get('/data-peserta', [SalesPlanController::class, 'dataPesertaUnified'])->name('data-peserta.unified');
 
         // Sales Plan
         Route::get('/salesplans', [SalesPlanController::class, 'index'])->name('salesplan.index');

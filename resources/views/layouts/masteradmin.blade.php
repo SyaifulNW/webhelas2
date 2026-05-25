@@ -470,12 +470,12 @@
                 {{-- Nav Item - Dashboard --}}
                 {{-- Nav Item - Dashboard --}}
                 @if(strtolower(Auth::user()->role) === 'administrator')
-                    {{-- 1. DASHBOARD ADMIN --}}
+                    {{-- 1. DASHBOARD CEO --}}
                     @if(\App\Models\Menu::isActive('dashboard_admin'))
                         <li class="nav-item {{ request()->routeIs('administrator') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('administrator') }}" title="DASHBOARD ADMIN">
+                            <a class="nav-link" href="{{ route('administrator') }}" title="DASHBOARD CEO">
                                 <i class="fas fa-fw fa-tachometer-alt"></i>
-                                <span><strong>DASHBOARD ADMIN</strong></span>
+                                <span><strong>DASHBOARD CEO</strong></span>
                             </a>
                         </li>
                     @endif
@@ -490,45 +490,24 @@
                         </li>
                     @endif
 
-                    {{-- Zoom Scheduling Calendar (M1T One-on-One) --}}
-                    <li class="nav-item {{ request()->routeIs('zoom-schedule.calendar') ? 'active' : '' }}">
-                        <a class="nav-link" href="{{ route('zoom-schedule.calendar') }}" title="ONE-ON-ONE ZOOM">
-                            <i class="fas fa-fw fa-video"></i>
-                            <span><strong>ONE-ON-ONE ZOOM</strong></span>
-                        </a>
-                    </li>
 
-                    {{-- 3. DATA PESERTA MBC --}}
+
+                    {{-- 3. DATA PESERTA (Unified MBC & M1T) --}}
                     @if(\App\Models\Menu::isActive('sales_plan'))
-                        <li class="nav-item {{ request('type') == 'mbc' ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('admin.salesplan.index', ['type' => 'mbc']) }}" title="DATA PESERTA MBC">
-                                <i class="fas fa-fw fa-users"></i>
-                                <span><strong>DATA PESERTA MBC</strong></span>
+                        <li class="nav-item {{ request()->routeIs('admin.data-peserta.unified') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('admin.data-peserta.unified') }}" title="DATA PESERTA">
+                                <i class="fas fa-fw fa-id-card"></i>
+                                <span><strong>DATA PESERTA</strong></span>
+                                @if(isset($pendingM1TCount) && $pendingM1TCount > 0)
+                                    <span class="badge badge-pending-yellow badge-pulse ml-2">{{ $pendingM1TCount }}</span>
+                                @endif
                             </a>
                         </li>
                     @endif
-
-                    {{-- 4. DATA PESERTA M1T --}}
-                    <li class="nav-item {{ request()->routeIs('peserta-smi.index') ? 'active' : '' }}">
-                        <a class="nav-link" href="{{ route('peserta-smi.index') }}" title="Peserta M1T">
-                            <i class="fas fa-fw fa-user-graduate"></i>
-                            <span style="text-transform: none;"><strong>DATA PESERTA M1T</strong></span>
-                            @if($pendingM1TCount > 0)
-                                <span class="badge badge-pending-yellow badge-pulse ml-2">{{ $pendingM1TCount }}</span>
-                            @endif
-                        </a>
-                    </li>
 
 
                     {{-- 6. PENILAIAN KARYAWAN --}}
-                    @if(\App\Models\Menu::isActive('penilaian_karyawan'))
-                        <li class="nav-item {{ request()->routeIs('admin.penilaian-cs.index') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('admin.penilaian-cs.index') }}" title="PENILAIAN KARYAWAN">
-                                <i class="fas fa-fw fa-star"></i>
-                                <span><strong>PENILAIAN KARYAWAN</strong></span>
-                            </a>
-                        </li>
-                    @endif
+
 
                     {{-- 7. MONITORING CHAPTER --}}
                     <li class="nav-item {{ (request()->routeIs('gantt.index') && request('view_role') == 'chapter') ? 'active' : '' }}">
@@ -870,18 +849,19 @@
                                     <li
                                         class="nav-item {{ (request()->routeIs('admin.database.database') && request('view') == 'me') ? 'active' : '' }}">
                                         <a class="nav-link" href="{{ route('admin.database.database', ['view' => 'me']) }}">
-                                            <i class="fas fa-fw fa-tachometer-alt"></i>
                                             <span><strong>DATABASE CALON PESERTA{{ $userRole === 'cs-mbc' ? '' : ' M1T' }}</strong></span>
                                         </a>
                                     </li>
                                 @endif
 
-                                <li class="nav-item {{ request()->routeIs('zoom-schedule.calendar') ? 'active' : '' }}">
-                                    <a class="nav-link" href="{{ route('zoom-schedule.calendar') }}">
-                                        <i class="fas fa-fw fa-video"></i>
-                                        <span><strong>ONE-ON-ONE ZOOM</strong></span>
-                                    </a>
-                                </li>
+                                @if(!in_array($userRole, ['chapter', 'agen']))
+                                    <li class="nav-item {{ request()->routeIs('zoom-schedule.calendar') ? 'active' : '' }}">
+                                        <a class="nav-link" href="{{ route('zoom-schedule.calendar') }}">
+                                            <i class="fas fa-fw fa-video"></i>
+                                            <span><strong>ONE-ON-ONE ZOOM</strong></span>
+                                        </a>
+                                    </li>
+                                @endif
 
                         @if(\App\Models\Menu::isActive('daily_activity') && !in_array($userRole, ['reseller', 'chapter']))
 
@@ -1639,6 +1619,157 @@
             });
         });
     </script>
+
+    <!-- Database Realtime Notification script -->
+    <script>
+        $(document).ready(function () {
+            // CSS styles for pulsing dot
+            $('<style>')
+                .prop('type', 'text/css')
+                .html(`
+                    @keyframes pulse-red {
+                        0% {
+                            transform: scale(0.9);
+                            box-shadow: 0 0 0 0 rgba(231, 74, 59, 0.9);
+                        }
+                        70% {
+                            transform: scale(1.1);
+                            box-shadow: 0 0 0 8px rgba(231, 74, 59, 0);
+                        }
+                        100% {
+                            transform: scale(0.9);
+                            box-shadow: 0 0 0 0 rgba(231, 74, 59, 0);
+                        }
+                    }
+                    .db-pulse-badge {
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        width: 16px !important;
+                        height: 16px !important;
+                        min-width: 16px !important;
+                        max-width: 16px !important;
+                        padding: 0 !important;
+                        background-color: #e74a3b !important; /* Red color */
+                        color: white !important;
+                        font-size: 10px !important;
+                        font-weight: 700 !important;
+                        border-radius: 50% !important;
+                        margin-right: 8px !important;
+                        vertical-align: middle !important;
+                        box-shadow: 0 0 0 0 rgba(231, 74, 59, 0.9);
+                        animation: pulse-red 1.5s infinite !important;
+                        flex-shrink: 0 !important;
+                    }
+                `)
+                .appendTo('head');
+
+            let originalTitle = document.title;
+            let lastCountKey = 'last_db_count_' + '{{ auth()->check() ? auth()->user()->id : 0 }}';
+
+            function checkNewDatabase() {
+                $.ajax({
+                    url: "{{ route('admin.database.realtime-count') }}",
+                    method: 'GET',
+                    success: function (response) {
+                        if (response && typeof response.count !== 'undefined') {
+                            let currentCount = parseInt(response.count);
+                            let lastCount = localStorage.getItem(lastCountKey);
+
+                            // If not set, initialize with current count
+                            if (lastCount === null) {
+                                localStorage.setItem(lastCountKey, currentCount);
+                                lastCount = currentCount;
+                            } else {
+                                lastCount = parseInt(lastCount);
+                            }
+
+                            // If on the database page, automatically synchronize and reset
+                            if (window.location.pathname.includes('/database')) {
+                                localStorage.setItem(lastCountKey, currentCount);
+                                lastCount = currentCount;
+                            }
+
+                            // Always hide icons for database links to keep sidebar clean as requested
+                            $('a[href*="database"]').each(function () {
+                                $(this).find('i').hide();
+                            });
+
+                            if (currentCount > lastCount) {
+                                let diff = currentCount - lastCount;
+                                
+                                // 1. Update Title Bar with (diff) WhatsApp style
+                                document.title = '(' + diff + ') ' + originalTitle;
+
+                                // 2. Add or update Pulsing Badge on the left of database sidebar links
+                                $('a[href*="database"]').each(function () {
+                                    let $badge = $(this).find('.db-pulse-badge');
+                                    if ($badge.length) {
+                                        $badge.text(diff);
+                                    } else {
+                                        $(this).prepend('<span class="db-pulse-badge">' + diff + '</span>');
+                                    }
+                                });
+                            } else {
+                                // Reset title and remove badge
+                                document.title = originalTitle;
+                                $('.db-pulse-badge').remove();
+                            }
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error('Realtime DB count check failed');
+                    }
+                });
+            }
+
+            // Check immediately on load
+            checkNewDatabase();
+
+            // Poll every 15 seconds
+            setInterval(checkNewDatabase, 15000);
+        });
+    </script>
+    @if(request()->has('embed'))
+        <script>
+            $(document).ready(function() {
+                function patchFormsAndLinks() {
+                    // 1. Add embed=1 hidden inputs to all forms
+                    $('form').each(function() {
+                        if ($(this).find('input[name="embed"]').length === 0) {
+                            $(this).append('<input type="hidden" name="embed" value="1">');
+                        }
+                    });
+                    
+                    // 2. Append embed=1 to all normal links
+                    $('a').each(function() {
+                        var href = $(this).attr('href');
+                        if (href && href !== '#' && href !== '' && href.indexOf('javascript:') !== 0 && href.indexOf('tel:') !== 0 && href.indexOf('mailto:') !== 0) {
+                            if (href.indexOf('?') === -1) {
+                                $(this).attr('href', href + '?embed=1');
+                            } else if (href.indexOf('embed=1') === -1) {
+                                $(this).attr('href', href + '&embed=1');
+                            }
+                        }
+                    });
+                }
+                
+                // Initial patch on page load
+                patchFormsAndLinks();
+                
+                // Keep patching when DOM changes via AJAX
+                $(document).ajaxComplete(function() {
+                    patchFormsAndLinks();
+                });
+                
+                // Safe observer in case of dynamic modal / dropdown inserts
+                var observer = new MutationObserver(function() {
+                    patchFormsAndLinks();
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        </script>
+    @endif
 </body>
 
 </html>

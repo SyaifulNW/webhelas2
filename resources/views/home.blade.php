@@ -168,6 +168,7 @@
 
         .premium-tab.active.color-primary {
             background-color: #4e73df !important;
+            color: white !important;
             border-color: #4e73df !important;
             margin-bottom: -2px !important;
             /* Overlap the baseline exactly */
@@ -179,6 +180,15 @@
             background-color: #1cc88a !important;
             color: white !important;
             border-color: #1cc88a !important;
+            margin-bottom: -2px !important;
+            padding-bottom: 12px !important;
+            z-index: 2;
+        }
+
+        .premium-tab.active.color-info {
+            background-color: #36b9cc !important;
+            color: white !important;
+            border-color: #36b9cc !important;
             margin-bottom: -2px !important;
             padding-bottom: 12px !important;
             z-index: 2;
@@ -404,7 +414,7 @@
                     <button class="nav-link premium-tab color-info" id="performance-tab-link" data-toggle="tab"
                         data-target="#performance-tab" type="button" role="tab" aria-controls="performance-tab"
                         aria-selected="false">
-                        <i class="fas fa-chart-bar"></i> Performance Chapter
+                        <i class="fas fa-trophy text-warning"></i> Leaderboard
                     </button>
                 </li>
             </ul>
@@ -716,134 +726,296 @@
             </div>
             </div> <!-- End TAB 2 -->
 
-            <!-- ================== TAB 3: PERFORMANCE CHAPTER ================== -->
+            <!-- ================== TAB 3: LEADERBOARD CHAPTER ================== -->
             <div class="tab-pane fade p-4" id="performance-tab" role="tabpanel" aria-labelledby="performance-tab-link" 
-                 style="background: #f6f9ff; border-radius: 25px; box-shadow: inset 0 0 20px rgba(0,0,0,0.03); border: 1px solid #eef2f8;">
-                <div class="mb-4">
-                    <h4 class="font-weight-bold text-gray-800"><i class="fas fa-chart-line mr-2 text-primary"></i> Analisis Performa Chapter</h4>
-                    <p class="text-muted small">Pantau metrik utama pertumbuhan dan keberhasilan event chapter Anda secara real-time.</p>
+                 style="background: #f8fafc; border-radius: 25px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;">
+                
+                <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h4 class="font-weight-bold text-gray-800"><i class="fas fa-trophy mr-2 text-warning"></i> Leaderboard Chapter</h4>
+                        <p class="text-muted small mb-0">Peringkat performa seluruh Chapter berdasarkan keaktifan, jumlah agen, dan peserta M1T.</p>
+                    </div>
+                    <span class="badge badge-primary px-3 py-2 font-weight-bold shadow-sm" style="border-radius: 20px;">
+                        <i class="fas fa-calendar-alt mr-1"></i> Periode: {{ $bulanLabel }}
+                    </span>
                 </div>
-                <div class="row g-4 mb-5">
-                    <!-- 1. Jumlah Peserta Open House (Traffic) -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-indigo h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-users"></i>
+
+                <!-- 🏆 PODIUM TOP 3 CHAPTERS 🏆 -->
+                @if(count($leaderboardData) >= 3)
+                    <div class="row align-items-end justify-content-center mb-5 mt-4">
+                        <!-- 🥈 RANK 2 (Silver) -->
+                        <div class="col-md-3 col-sm-4 text-center order-2 order-md-1 mb-4 mb-md-0">
+                            <div class="card border-0 shadow-sm p-4 bg-white hover-up" style="border-radius: 20px; border-top: 5px solid #cbd5e1 !important; transform: translateY(15px);">
+                                <div class="position-relative d-inline-block mb-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-light shadow-sm" style="width: 60px; height: 60px; border: 3px solid #cbd5e1;">
+                                        <i class="fas fa-medal fa-2x" style="color: #94a3b8;"></i>
+                                    </div>
+                                    <span class="position-absolute badge badge-secondary rounded-circle px-2 py-1 font-weight-bold" style="top: -5px; right: -5px; font-size: 0.8rem; background: #94a3b8; border: 2px solid white;">2</span>
+                                </div>
+                                <h5 class="font-weight-bold text-dark mb-1" style="font-size: 1rem;">{{ $leaderboardData[1]['nama_chapter'] }}</h5>
+                                <p class="text-muted small mb-3"><i class="fas fa-user mr-1 text-secondary"></i> {{ $leaderboardData[1]['nama_leader'] }}</p>
+                                <div class="d-flex justify-content-around bg-light py-2 px-1 rounded-lg" style="border-radius: 12px;">
+                                    <div>
+                                        <span class="d-block font-weight-bold text-primary" style="font-size: 1.1rem;">{{ $leaderboardData[1]['jumlah_peserta_m1t'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Peserta</span>
+                                    </div>
+                                    <div style="border-left: 1px solid #e2e8f0; height: 30px;"></div>
+                                    <div>
+                                        <span class="d-block font-weight-bold text-success" style="font-size: 1.1rem;">{{ $leaderboardData[1]['jumlah_agen'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Agen</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="perf-label">Traffic Open House</div>
-                            <div class="perf-value">{{ number_format($trafficOH) }}</div>
-                            <div class="perf-target">Target: 30-50 / Event</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ min(100, ($trafficOH/40)*100) }}%"></div>
+                        </div>
+
+                        <!-- 🥇 RANK 1 (Gold) -->
+                        <div class="col-md-4 col-sm-4 text-center order-1 order-md-2 mb-4 mb-md-0">
+                            <div class="card border-0 shadow-lg p-5 bg-white hover-up" style="border-radius: 25px; border-top: 6px solid #fbbf24 !important; box-shadow: 0 20px 25px -5px rgba(251, 191, 36, 0.1), 0 10px 10px -5px rgba(251, 191, 36, 0.04) !important;">
+                                <div class="position-relative d-inline-block mb-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-amber shadow" style="width: 80px; height: 80px; border: 4px solid #fbbf24; background-color: #fef3c7;">
+                                        <i class="fas fa-crown fa-3x" style="color: #d97706; animation: floatCrown 3s infinite ease-in-out;"></i>
+                                    </div>
+                                    <span class="position-absolute badge badge-warning rounded-circle px-2 py-1 font-weight-bold" style="top: -5px; right: -5px; font-size: 0.9rem; background: #fbbf24; border: 2px solid white; color: #78350f;">1</span>
+                                </div>
+                                <h4 class="font-weight-bold text-dark mb-1" style="font-size: 1.25rem;">{{ $leaderboardData[0]['nama_chapter'] }}</h4>
+                                <p class="text-muted small mb-4"><i class="fas fa-user mr-1 text-warning"></i> {{ $leaderboardData[0]['nama_leader'] }}</p>
+                                <div class="d-flex justify-content-around bg-warning-light py-3 px-2 rounded-lg" style="border-radius: 15px; background: #fffbeb;">
+                                    <div>
+                                        <span class="d-block font-weight-bold text-primary" style="font-size: 1.3rem;">{{ $leaderboardData[0]['jumlah_peserta_m1t'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Peserta</span>
+                                    </div>
+                                    <div style="border-left: 1px solid #fef3c7; height: 35px;"></div>
+                                    <div>
+                                        <span class="d-block font-weight-bold text-success" style="font-size: 1.3rem;">{{ $leaderboardData[0]['jumlah_agen'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Agen</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 🥉 RANK 3 (Bronze) -->
+                        <div class="col-md-3 col-sm-4 text-center order-3 order-md-3 mb-4 mb-md-0">
+                            <div class="card border-0 shadow-sm p-4 bg-white hover-up" style="border-radius: 20px; border-top: 5px solid #d97706 !important; transform: translateY(20px);">
+                                <div class="position-relative d-inline-block mb-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-light shadow-sm" style="width: 60px; height: 60px; border: 3px solid #d97706;">
+                                        <i class="fas fa-medal fa-2x" style="color: #b45309;"></i>
+                                    </div>
+                                    <span class="position-absolute badge badge-danger rounded-circle px-2 py-1 font-weight-bold" style="top: -5px; right: -5px; font-size: 0.8rem; background: #b45309; border: 2px solid white;">3</span>
+                                </div>
+                                <h5 class="font-weight-bold text-dark mb-1" style="font-size: 1rem;">{{ $leaderboardData[2]['nama_chapter'] }}</h5>
+                                <p class="text-muted small mb-3"><i class="fas fa-user mr-1 text-secondary"></i> {{ $leaderboardData[2]['nama_leader'] }}</p>
+                                <div class="d-flex justify-content-around bg-light py-2 px-1 rounded-lg" style="border-radius: 12px;">
+                                    <div>
+                                        <span class="d-block font-weight-bold text-primary" style="font-size: 1.1rem;">{{ $leaderboardData[2]['jumlah_peserta_m1t'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Peserta</span>
+                                    </div>
+                                    <div style="border-left: 1px solid #e2e8f0; height: 30px;"></div>
+                                    <div>
+                                        <span class="d-block font-weight-bold text-success" style="font-size: 1.1rem;">{{ $leaderboardData[2]['jumlah_agen'] }}</span>
+                                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Agen</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <style>
+                    .hover-up {
+                        transition: all 0.3s ease;
+                    }
+                    .hover-up:hover {
+                        transform: translateY(-5px) scale(1.02) !important;
+                        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+                    }
+                    @keyframes floatCrown {
+                        0%, 100% { transform: translateY(0) rotate(0deg); }
+                        50% { transform: translateY(-5px) rotate(3deg); }
+                    }
+                </style>
+
+                <div class="row mt-4">
+                    <!-- 📊 LEADERBOARD TABLE -->
+                    <div class="col-lg-7 mb-4">
+                        <div class="card border-0 shadow-sm h-100 bg-white" style="border-radius: 20px; overflow: hidden;">
+                            <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
+                                <h5 class="font-weight-bold text-gray-800 mb-0"><i class="fas fa-list-ol mr-2 text-primary"></i> Peringkat Lengkap</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 align-middle">
+                                        <thead class="bg-light">
+                                            <tr style="background-color: #f8fafc;">
+                                                <th class="border-0 text-center text-gray-800 py-3" style="width: 80px;">Peringkat</th>
+                                                <th class="border-0 text-gray-800 py-3">Nama Chapter</th>
+                                                <th class="border-0 text-center text-gray-800 py-3">Jumlah Agen</th>
+                                                <th class="border-0 text-center text-gray-800 py-3">M1T (All Time)</th>
+                                                <th class="border-0 text-center text-gray-800 py-3">M1T (Bulan Ini)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($leaderboardData as $index => $row)
+                                                @php
+                                                    $rank = $index + 1;
+                                                    $rankContent = $rank;
+                                                    if ($rank === 1) {
+                                                        $rankContent = '<div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning text-white font-weight-bold shadow-sm" style="width: 32px; height: 32px; font-size: 0.9rem;"><i class="fas fa-crown text-white"></i></div>';
+                                                    } elseif ($rank === 2) {
+                                                        $rankContent = '<div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white font-weight-bold shadow-sm" style="width: 32px; height: 32px; font-size: 0.9rem; background-color: #94a3b8 !important;">2</div>';
+                                                    } elseif ($rank === 3) {
+                                                        $rankContent = '<div class="d-inline-flex align-items-center justify-content-center rounded-circle font-weight-bold shadow-sm text-white" style="width: 32px; height: 32px; font-size: 0.9rem; background-color: #b45309 !important;">3</div>';
+                                                    } else {
+                                                        $rankContent = '<span class="font-weight-bold text-gray-600">' . $rank . '</span>';
+                                                    }
+                                                @endphp
+                                                <tr class="{{ Auth::user()->chapter == $row['nama_chapter'] ? 'bg-light' : '' }}">
+                                                    <td class="text-center align-middle py-3">{!! $rankContent !!}</td>
+                                                    <td class="align-middle py-3">
+                                                        <span class="font-weight-bold text-gray-900 d-block" style="font-size: 0.95rem;">
+                                                            {{ $row['nama_chapter'] }}
+                                                            @if(Auth::user()->chapter == $row['nama_chapter'])
+                                                                <span class="badge badge-primary ml-1" style="font-size: 0.65rem; padding: 3px 8px;">Chapter Anda</span>
+                                                            @endif
+                                                        </span>
+                                                        <span class="text-muted small"><i class="fas fa-user-circle mr-1"></i> {{ $row['nama_leader'] }}</span>
+                                                    </td>
+                                                    <td class="text-center align-middle py-3">
+                                                        <span class="badge badge-success px-3 py-1 font-weight-bold" style="font-size: 0.85rem; border-radius: 12px;">
+                                                            {{ $row['jumlah_agen'] }} Agen
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center align-middle py-3">
+                                                        <span class="font-weight-bold text-primary" style="font-size: 1rem;">
+                                                            {{ $row['jumlah_peserta_m1t'] }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center align-middle py-3">
+                                                        <span class="badge badge-info px-3 py-1 font-weight-bold" style="font-size: 0.85rem; border-radius: 12px;">
+                                                            +{{ $row['jumlah_peserta_m1t_bulan_ini'] }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-5 text-muted">
+                                                        <i class="fas fa-trophy fa-2x mb-3 d-block opacity-50"></i>
+                                                        Belum ada data peringkat.
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 2. Persentase Peserta Berkualitas -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-emerald h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-user-check"></i>
+                    <!-- 📈 VISUAL CHART -->
+                    <div class="col-lg-5 mb-4">
+                        <div class="card border-0 shadow-sm h-100 bg-white" style="border-radius: 20px; overflow: hidden;">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="font-weight-bold text-gray-800 mb-0"><i class="fas fa-chart-bar mr-2 text-success"></i> Grafik Performa</h5>
                             </div>
-                            <div class="perf-label">Qualified Leads</div>
-                            <div class="perf-value">{{ $qualifiedRate }}%</div>
-                            <div class="perf-target">Target: ≥ 60% (Hot+Warm)</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ $qualifiedRate }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. Conversion Rate Open House -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-cyan h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-exchange-alt"></i>
-                            </div>
-                            <div class="perf-label">Closing Rate (OH)</div>
-                            <div class="perf-value">{{ $closingRateOH }}%</div>
-                            <div class="perf-target">Target: ≥ 30% On The Spot</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ $closingRateOH }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. Total Closing per Event -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-amber h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-cart-arrow-down"></i>
-                            </div>
-                            <div class="perf-label">Closing per Event</div>
-                            <div class="perf-value">{{ $avgClosingPerEvent }}</div>
-                            <div class="perf-target">Target: 8-15 / Event</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ min(100, ($avgClosingPerEvent/12)*100) }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. Revenue per Event -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-rose h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <div class="perf-label">Revenue per Event</div>
-                            <div class="perf-value" style="font-size: 1.4rem;">Rp {{ number_format($avgRevenuePerEvent/1000000, 1) }}M</div>
-                            <div class="perf-target">Target: ≥ 12M - 20M</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ min(100, ($avgRevenuePerEvent/15000000)*100) }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 6. Jumlah Member Aktif M1T -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-slate h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-user-graduate"></i>
-                            </div>
-                            <div class="perf-label">Member Aktif M1T</div>
-                            <div class="perf-value">{{ number_format($totalMemberAktif) }}</div>
-                            <div class="perf-target">Target: Growth Stabil</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: 100%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 7. Retention Rate -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-violet h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="perf-label">Retention Rate</div>
-                            <div class="perf-value">{{ $retentionRate }}%</div>
-                            <div class="perf-target">Target: ≥ 70% (12 Mo)</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ $retentionRate }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 8. Frekuensi Event -->
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card perf-card perf-blue h-100 p-3">
-                            <div class="perf-icon-box">
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-                            <div class="perf-label">Frekuensi Event</div>
-                            <div class="perf-value">{{ $eventCount }}</div>
-                            <div class="perf-target">Target: 2-4 / Bulan</div>
-                            <div class="perf-progress progress">
-                                <div class="progress-bar" role="progressbar" style="width: {{ min(100, ($eventCount/3)*100) }}%"></div>
+                            <div class="card-body d-flex flex-column justify-content-center" style="min-height: 350px;">
+                                <div class="position-relative w-100" style="height: 300px;">
+                                    <canvas id="leaderboardChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- 📊 CHART.JS CONFIGURATION SCRIPT -->
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const ctxLeaderboard = document.getElementById('leaderboardChart').getContext('2d');
+                        
+                        // Extract leaderboard arrays for chart
+                        const chapters = @json(collect($leaderboardData)->pluck('nama_chapter'));
+                        const pesertaCounts = @json(collect($leaderboardData)->pluck('jumlah_peserta_m1t'));
+                        const agenCounts = @json(collect($leaderboardData)->pluck('jumlah_agen'));
+
+                        new Chart(ctxLeaderboard, {
+                            type: 'bar',
+                            data: {
+                                labels: chapters,
+                                datasets: [
+                                    {
+                                        label: 'Jumlah Peserta M1T',
+                                        data: pesertaCounts,
+                                        backgroundColor: 'rgba(78, 115, 223, 0.85)',
+                                        borderColor: 'rgba(78, 115, 223, 1)',
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                    },
+                                    {
+                                        label: 'Jumlah Agen',
+                                        data: agenCounts,
+                                        backgroundColor: 'rgba(28, 200, 138, 0.85)',
+                                        borderColor: 'rgba(28, 200, 138, 1)',
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            font: {
+                                                family: 'Nunito, -apple-system, sans-serif',
+                                                size: 11,
+                                                weight: 'bold'
+                                            },
+                                            padding: 15
+                                        }
+                                    },
+                                    tooltip: {
+                                        padding: 10,
+                                        cornerRadius: 8,
+                                        titleFont: {
+                                            family: 'Nunito, -apple-system, sans-serif',
+                                            size: 13,
+                                            weight: 'bold'
+                                        },
+                                        bodyFont: {
+                                            family: 'Nunito, -apple-system, sans-serif',
+                                            size: 12
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            font: {
+                                                family: 'Nunito, -apple-system, sans-serif',
+                                                size: 10,
+                                                weight: 'bold'
+                                            }
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            precision: 0,
+                                            font: {
+                                                family: 'Nunito, -apple-system, sans-serif',
+                                                size: 10,
+                                                weight: 'bold'
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                </script>
             </div> <!-- End TAB 3 -->
         </div> <!-- End tab-content -->
 

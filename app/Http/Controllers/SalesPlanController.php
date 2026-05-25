@@ -1062,6 +1062,11 @@ class SalesPlanController extends Controller
         }
     }
 
+    public function dataPesertaUnified(Request $request)
+    {
+        return view('admin.data-peserta.index');
+    }
+
     public function show($id)
     {
         if ($id === 'tasks-today') {

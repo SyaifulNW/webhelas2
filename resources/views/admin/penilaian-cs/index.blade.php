@@ -302,4 +302,42 @@
 
     </div>
 </div>
+
+<!-- Fullscreen Glassmorphic Loader Overlay -->
+<div id="filter-loader" class="d-none position-fixed w-100 h-100 top-0 left-0 d-flex flex-column align-items-center justify-content-center" style="background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); z-index: 999999;">
+    <div class="d-flex flex-column align-items-center text-center">
+        <!-- Premium Custom Spinning Loader -->
+        <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem; border-width: 0.3em;">
+            <span class="sr-only">Loading...</span>
+        </div>
+        <h5 class="mt-4 font-weight-bold text-dark" style="letter-spacing: 1px; font-family: 'Outfit', sans-serif;">Memuat Data Kinerja...</h5>
+        <p class="text-muted small px-3">Sedang merangkum data closing, omset, dan laporan harian CS</p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector('form[action*="penilaian-cs"]');
+        if (form) {
+            form.addEventListener('submit', function() {
+                // Show glassmorphic loading overlay
+                const loader = document.getElementById('filter-loader');
+                if (loader) {
+                    loader.classList.remove('d-none');
+                }
+                
+                // Show spinning state on the button
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> MEMUAT DATA...';
+                }
+                
+                // Notify parent iframe container if available
+                if (window.parent && typeof window.parent.showLoading === 'function') {
+                    window.parent.showLoading();
+                }
+            });
+        }
+    });
+</script>
 @endsection

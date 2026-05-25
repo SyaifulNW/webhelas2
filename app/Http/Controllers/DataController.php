@@ -1556,4 +1556,51 @@ use App\Models\SalesPlan; // Ensure you import the Salesplan model
             return redirect()->back()->with('error', 'Gagal memproses data.');
         }
     }
+
+    public function getRealtimeCount(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['count' => 0]);
+        }
+        $userRole = strtolower($user->role);
+        
+        $query = \App\Models\Data::whereIn('status_peserta', ['peserta_baru', 'pindah_salesplan']);
+        
+        $viewType = $request->input('view_type');
+        if (empty($viewType) && $userRole === 'administrator') {
+            $viewType = 'cs';
+        }
+        if ($userRole === 'operasional') {
+            $viewType = 'chapter';
+        }
+        
+        if ($viewType === 'cs') {
+            $query->where('created_by_role', 'cs-mbc');
+        } elseif ($viewType === 'chapter') {
+            $query->whereIn('created_by_role', ['chapter', 'reseller', 'agen']);
+        } elseif ($userRole === 'cs-mbc') {
+            $query->whereNotIn('created_by_role', ['chapter', 'reseller', 'agen']);
+        }
+
+        if ($userRole === 'marketing') {
+            if (stripos($user->name, 'Felmi') !== false) {
+                $query->whereIn('leads', ['Event', 'Open House']);
+            } elseif (stripos($user->name, 'Nisa') !== false) {
+                $query->whereIn('leads', ['Online', 'Sosmed']);
+            } else {
+                $query->whereIn('leads', ['Marketing', 'Ads', 'Sosmed', 'Zoom', 'Open House']);
+            }
+            $query->where('created_by_role', 'cs-mbc');
+        } elseif (!in_array($userRole, ['administrator', 'manager', 'chapter', 'reseller', 'agen', 'operasional']) && $user->name !== 'Agus Setyo') {
+            $query->where('created_by', $user->name);
+        }
+
+        if ($userRole === 'manager') {
+            $query->whereIn('created_by', ['Latifah', 'Tursia']);
+        }
+
+        $count = $query->count();
+        return response()->json(['count' => $count]);
+    }
 }

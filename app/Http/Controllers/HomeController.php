@@ -50,6 +50,7 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $role = auth()->check() ? strtolower(auth()->user()->role) : 'guest';
+        $leaderboardData = [];
         if (auth()->check()) {
             if ($role === 'produksi') {
                 return redirect()->route('produksi.performance');
@@ -312,13 +313,67 @@ class HomeController extends Controller
                 } else {
                     $cohortStartQuery->whereIn('created_by', $allTeamIds);
                 }
-                
                 $totalStartCohort = $cohortStartQuery->count();
                 $stillActiveCohort = (clone $cohortStartQuery)->where('status', '!=', 'Cuti')->count();
                 $retentionRate = $totalStartCohort > 0 ? round(($stillActiveCohort / $totalStartCohort) * 100, 2) : 85; // Default 85 if no cohort data
                 $totalMemberAktif = $totalPesertaAktifAllTime;
 
+                // Fetch Leaderboard data
+                $leaderboardData = [];
+                $allChapters = \App\Models\User::where('role', 'chapter')->get();
+                foreach ($allChapters as $chap) {
+                    $cleanChapName = trim(str_ireplace('CHAPTER', '', $chap->chapter));
+                    $resellerIds = \App\Models\User::where('role', 'reseller')
+                        ->where('chapter', 'LIKE', '%' . $cleanChapName . '%')
+                        ->pluck('id');
+                    $teamIds = $resellerIds->merge([$chap->id])->unique();
+                    
+                    $jumlahAgen = $resellerIds->count();
+                    
+                    $jumlahPesertaM1T = \App\Models\SalesPlan::join('peserta_smis', 'salesplans.id', '=', 'peserta_smis.sales_plan_id')
+                        ->where('salesplans.status', 'sudah_transfer')
+                        ->where('peserta_smis.approval_status', 'Approved')
+                        ->whereIn('salesplans.created_by', $teamIds)
+                        ->count();
+
+                    $jumlahPesertaM1TBulanIni = \App\Models\SalesPlan::join('peserta_smis', 'salesplans.id', '=', 'peserta_smis.sales_plan_id')
+                        ->where('salesplans.status', 'sudah_transfer')
+                        ->where('peserta_smis.approval_status', 'Approved')
+                        ->whereYear('salesplans.updated_at', $tahun)
+                        ->whereMonth('salesplans.updated_at', $bulanNum)
+                        ->whereIn('salesplans.created_by', $teamIds)
+                        ->count();
+                        
+                    $leaderboardData[] = [
+                        'chapter_id' => $chap->id,
+                        'nama_leader' => $chap->name,
+                        'nama_chapter' => $chap->chapter ?: 'No Chapter Name',
+                        'jumlah_agen' => $jumlahAgen,
+                        'jumlah_peserta_m1t' => $jumlahPesertaM1T,
+                        'jumlah_peserta_m1t_bulan_ini' => $jumlahPesertaM1TBulanIni,
+                    ];
+                }
+
+                // Sort by:
+                // 1. Peserta M1T descending
+                // 2. Jumlah Agen descending
+                // 3. Peserta M1T Bulan Ini descending
+                // 4. Chapter Name ascending (deterministic)
+                usort($leaderboardData, function($a, $b) {
+                    if ($b['jumlah_peserta_m1t'] !== $a['jumlah_peserta_m1t']) {
+                        return $b['jumlah_peserta_m1t'] <=> $a['jumlah_peserta_m1t'];
+                    }
+                    if ($b['jumlah_agen'] !== $a['jumlah_agen']) {
+                        return $b['jumlah_agen'] <=> $a['jumlah_agen'];
+                    }
+                    if ($b['jumlah_peserta_m1t_bulan_ini'] !== $a['jumlah_peserta_m1t_bulan_ini']) {
+                        return $b['jumlah_peserta_m1t_bulan_ini'] <=> $a['jumlah_peserta_m1t_bulan_ini'];
+                    }
+                    return strcasecmp($a['nama_chapter'], $b['nama_chapter']);
+                });
+
                 return view('home', compact(
+                    'leaderboardData',
                     'role', 'chapterName', 'totalPesertaAktif', 'totalLeads', 'omsetBulanIni',
                     'komisiBulanIni', 'bonus', 'totalPenghasilan', 'progressProgress', 'targetBonus', 'bulanStr',
                     'directFee', 'royalti', 'bonusPribadi', 'bonusTim', 'komisi', 'kelasOmsetFiltered',
@@ -671,6 +726,7 @@ class HomeController extends Controller
     // ====================== RETURN ======================
     $skorDaily = $totalNilai;
     return view('home', compact(
+        'leaderboardData',
         'role',
         'kelasOmsetFiltered',
         'totalKomisi',

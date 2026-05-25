@@ -81,6 +81,9 @@
         <div class="read-more-container" data-type="situasi">
             <div contenteditable="{{ $canEdit ? 'true' : 'false' }}" class="{{ $canEdit ? 'editable' : '' }} fw-bold" data-field="situasi_bisnis" style="outline:none; min-height: 45px; background: rgba(255,255,255,0.9); color: #000; padding: 8px; border-radius: 8px; border: 1px solid #dee2e6;">{{ $item->situasi_bisnis }}</div>
         </div>
+        @if(strlen($item->situasi_bisnis ?? '') > 100)
+            <button class="btn-read-more">Baca Selengkapnya</button>
+        @endif
     </td>
     
     @if($userRole === 'cs-mbc')
